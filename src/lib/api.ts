@@ -32,6 +32,11 @@ export function clearCatalogCache() {
 let cachedShopId: string | null = null;
 
 export async function getCurrentShopId(): Promise<string | null> {
+  // 🔥 ВРЕМЕННО ДЛЯ ТЕСТА — возвращаем shop_id = 1 (или 2, 3)
+  //return "1";
+  
+  // Оригинальный код закомментирован для теста
+  
   if (cachedShopId !== null) return cachedShopId;
   
   try {
@@ -58,6 +63,7 @@ export async function getCurrentShopId(): Promise<string | null> {
   } catch {
     return null;
   }
+  
 }
 
 export async function fetchCategories(): Promise<Category[]> {
@@ -180,7 +186,7 @@ export async function fetchCategoryView(
       return null;
     };
 
-    const ids = [...descendants];
+    const ids = [topId, ...descendants];
     if (ids.length === 0) return { chips, services: [] };
 
     const { data: svcData } = await supabase
