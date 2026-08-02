@@ -28,13 +28,49 @@ export function clearCatalogCache() {
   _cache.clear();
 }
 
+/* ---------- получение shop_id текущего пользователя ---------- */
+let cachedShopId: string | null = null;
+
+export async function getCurrentShopId(): Promise<string | null> {
+  if (cachedShopId !== null) return cachedShopId;
+  
+  try {
+    const initData = window.Telegram?.WebApp?.initData || "";
+    const params = new URLSearchParams(initData);
+    const userJson = params.get("user");
+    if (!userJson) return null;
+    
+    const user = JSON.parse(decodeURIComponent(userJson));
+    const telegramId = user.id;
+    
+    if (!telegramId) return null;
+    
+    const { data, error } = await supabase
+      .from("users")
+      .select("shop_id")
+      .eq("telegram_id", telegramId)
+      .maybeSingle();
+      
+    if (error || !data) return null;
+    
+    cachedShopId = data.shop_id?.toString() || null;
+    return cachedShopId;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchCategories(): Promise<Category[]> {
   return cached("categories", CATALOG_TTL, async () => {
+    const shopId = await getCurrentShopId();
+    if (!shopId) return [];
+    
     const { data } = await supabase
       .from("categories")
       .select("id, name, image_url")
       .is("parent_id", null)
       .eq("is_active", true)
+      .eq("shop_id", shopId)
       .order("sort_order")
       .order("name");
     return (data as Category[]) ?? [];
@@ -43,10 +79,14 @@ export async function fetchCategories(): Promise<Category[]> {
 
 export async function fetchPromos(): Promise<Promo[]> {
   return cached("promos", CATALOG_TTL, async () => {
+    const shopId = await getCurrentShopId();
+    if (!shopId) return [];
+    
     const { data } = await supabase
       .from("promotions")
       .select("id, title, banner_url, kind, discount_type, discount_value")
       .eq("is_active", true)
+      .eq("shop_id", shopId)
       .order("created_at", { ascending: false });
     return (data as Promo[]) ?? [];
   });
@@ -62,10 +102,14 @@ type SpecRow = {
 
 export async function fetchSpecialists(): Promise<SpecialistCard[]> {
   return cached("specialists", CATALOG_TTL, async () => {
+    const shopId = await getCurrentShopId();
+    if (!shopId) return [];
+    
     const { data } = await supabase
       .from("specialists")
       .select("id, full_name, photo_url, rating, specialist_services ( price )")
       .eq("is_active", true)
+      .eq("shop_id", shopId)
       .order("sort_order")
       .order("created_at");
 
@@ -96,10 +140,14 @@ export async function fetchCategoryView(
   topId: string,
 ): Promise<{ chips: Chip[]; services: ServiceCard[] }> {
   return cached(`categoryView:${topId}`, CATALOG_TTL, async () => {
+    const shopId = await getCurrentShopId();
+    if (!shopId) return { chips: [], services: [] };
+    
     const { data: catsData } = await supabase
       .from("categories")
       .select("id, parent_id, name, image_url")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .eq("shop_id", shopId);
     const cats = (catsData as CatRow[]) ?? [];
     const byId = new Map(cats.map((c) => [c.id, c]));
 
@@ -140,6 +188,7 @@ export async function fetchCategoryView(
       .select("id, name, image_url, duration_min, category_id, specialist_services ( price )")
       .in("category_id", ids)
       .eq("is_active", true)
+      .eq("shop_id", shopId)
       .order("name");
 
     const services: ServiceCard[] = ((svcData as SvcRow[]) ?? []).map((s) => {
@@ -173,10 +222,14 @@ export async function fetchServiceDetail(
   serviceId: string,
 ): Promise<{ service: ServiceDetail; masters: Master[] } | null> {
   return cached(`serviceDetail:${serviceId}`, CATALOG_TTL, async () => {
+    const shopId = await getCurrentShopId();
+    if (!shopId) return null;
+    
     const { data: svc } = await supabase
       .from("services")
       .select("id, name, image_url, duration_min, description")
       .eq("id", serviceId)
+      .eq("shop_id", shopId)
       .maybeSingle();
     if (!svc) return null;
 
@@ -199,15 +252,16 @@ export async function fetchServiceDetail(
     return { service: svc as ServiceDetail, masters };
   });
 }
-
 /* ---------- запись ---------- */
 const API = import.meta.env.VITE_API_URL as string;
 const initData = () => window.Telegram?.WebApp?.initData ?? "";
 
 export async function fetchBookingContext(serviceId: string, specialistId: string) {
+  const shopId = await getCurrentShopId();
+  
   const [svcRes, mRes, ssRes] = await Promise.all([
-    supabase.from("services").select("name, duration_min").eq("id", serviceId).maybeSingle(),
-    supabase.from("specialists").select("full_name, photo_url").eq("id", specialistId).maybeSingle(),
+    supabase.from("services").select("name, duration_min").eq("id", serviceId).eq("shop_id", shopId).maybeSingle(),
+    supabase.from("specialists").select("full_name, photo_url").eq("id", specialistId).eq("shop_id", shopId).maybeSingle(),
     supabase
       .from("specialist_services")
       .select("price")
@@ -338,11 +392,14 @@ export async function fetchSpecialistDetail(id: string): Promise<{
   reviewCount: number;
 }> {
   return cached(`specialistDetail:${id}`, CATALOG_TTL, async () => {
+    const shopId = await getCurrentShopId();
+    
     const [spRes, ssRes, wRes, rRes] = await Promise.all([
       supabase
         .from("specialists")
         .select("id, full_name, photo_url, bio, experience_years, rating")
         .eq("id", id)
+        .eq("shop_id", shopId)
         .maybeSingle(),
       supabase
         .from("specialist_services")
@@ -599,10 +656,14 @@ export type ServiceMaster = { id: string; full_name: string; photo_url: string |
 
 export async function fetchServiceMasters(serviceId: string): Promise<ServiceMaster[]> {
   return cached(`serviceMasters:${serviceId}`, CATALOG_TTL, async () => {
+    const shopId = await getCurrentShopId();
+    if (!shopId) return [];
+    
     const { data } = await supabase
       .from("specialist_services")
       .select("price, specialist:specialists ( id, full_name, photo_url, rating, is_active )")
-      .eq("service_id", serviceId);
+      .eq("service_id", serviceId)
+      .eq("shop_id", shopId);
     type Row = { price: number; specialist: { id: string; full_name: string; photo_url: string | null; rating: number; is_active: boolean } | null };
     return ((data as unknown as Row[]) ?? [])
       .filter((r) => r.specialist?.is_active)
