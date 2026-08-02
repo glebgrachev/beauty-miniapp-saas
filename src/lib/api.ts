@@ -32,38 +32,52 @@ export function clearCatalogCache() {
 let cachedShopId: string | null = null;
 
 export async function getCurrentShopId(): Promise<string | null> {
-  // 🔥 ВРЕМЕННО ДЛЯ ТЕСТА — возвращаем shop_id = 1 (или 2, 3)
-  //return "1";
-  
-  // Оригинальный код закомментирован для теста
-  
+  // 1. Проверяем кэш
   if (cachedShopId !== null) return cachedShopId;
   
+  // 2. Пробуем получить shop_id из URL (параметр start от Telegram)
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const startParam = params.get('start');
+    if (startParam && startParam.startsWith('shop_')) {
+      const shopId = startParam.replace('shop_', '');
+      cachedShopId = shopId;
+      console.log('🔍 shop_id из URL:', shopId);
+      return shopId;
+    }
+  } catch (e) {
+    // Игнорируем ошибки
+  }
+  
+  // 3. Пробуем получить shop_id из initData (для старых пользователей)
   try {
     const initData = window.Telegram?.WebApp?.initData || "";
     const params = new URLSearchParams(initData);
     const userJson = params.get("user");
-    if (!userJson) return null;
-    
-    const user = JSON.parse(decodeURIComponent(userJson));
-    const telegramId = user.id;
-    
-    if (!telegramId) return null;
-    
-    const { data, error } = await supabase
-      .from("users")
-      .select("shop_id")
-      .eq("telegram_id", telegramId)
-      .maybeSingle();
+    if (userJson) {
+      const user = JSON.parse(decodeURIComponent(userJson));
+      const telegramId = user.id;
       
-    if (error || !data) return null;
-    
-    cachedShopId = data.shop_id?.toString() || null;
-    return cachedShopId;
-  } catch {
-    return null;
+      if (telegramId) {
+        const { data, error } = await supabase
+          .from("users")
+          .select("shop_id")
+          .eq("telegram_id", telegramId)
+          .maybeSingle();
+          
+        if (!error && data?.shop_id) {
+          cachedShopId = data.shop_id?.toString() || null;
+          console.log('🔍 shop_id из users:', cachedShopId);
+          return cachedShopId;
+        }
+      }
+    }
+  } catch (e) {
+    // Игнорируем ошибки
   }
   
+  console.log('⚠️ shop_id не найден');
+  return null;
 }
 
 export async function fetchCategories(): Promise<Category[]> {
