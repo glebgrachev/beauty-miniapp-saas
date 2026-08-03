@@ -84,19 +84,22 @@ export async function getCurrentShopId(): Promise<string | null> {
   
   // 2. Пробуем получить shop_id из URL (параметр start от Telegram)
   try {
-    const params = new URLSearchParams(window.location.search);
+  const hash = window.location.hash;
+  if (hash) {
+    const params = new URLSearchParams(hash.split('?')[1] || '');
     const startParam = params.get('start');
     if (startParam && startParam.startsWith('shop_')) {
       const shopId = startParam.replace('shop_', '');
       cachedShopId = shopId;
-      console.log('🔍 shop_id из URL:', shopId);
+      console.log('🔍 shop_id из хэша URL:', shopId);
       
-      // ✅ СЮДА НУЖНО ДОБАВИТЬ
+      // ✅ СОЗДАЁМ ПОЛЬЗОВАТЕЛЯ
       await ensureUserExists(shopId);
       
       return shopId;
     }
-  } catch (e) {
+  }
+} catch (e) {
     // Игнорируем ошибки
   }
   
