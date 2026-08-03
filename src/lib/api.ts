@@ -28,6 +28,53 @@ export function clearCatalogCache() {
   _cache.clear();
 }
 
+// ✅ ВСТАВЛЯЕМ СЮДА
+async function ensureUserExists(shopId: string) {
+  try {
+    const initData = window.Telegram?.WebApp?.initData || "";
+    const params = new URLSearchParams(initData);
+    const userJson = params.get("user");
+    if (!userJson) return;
+    
+    const user = JSON.parse(decodeURIComponent(userJson));
+    const telegramId = user.id;
+    const firstName = user.first_name || '';
+    const lastName = user.last_name || '';
+    const username = user.username || '';
+    
+    const { data: existing } = await supabase
+      .from("users")
+      .select("telegram_id")
+      .eq("telegram_id", telegramId)
+      .maybeSingle();
+    
+    if (existing) {
+      await supabase
+        .from("users")
+        .update({ shop_id: Number(shopId) })
+        .eq("telegram_id", telegramId);
+      console.log('✅ Обновлён shop_id для пользователя:', telegramId);
+    } else {
+      const { error } = await supabase
+        .from("users")
+        .insert({
+          telegram_id: telegramId,
+          first_name: firstName,
+          last_name: lastName,
+          username: username,
+          shop_id: Number(shopId),
+        });
+      if (!error) {
+        console.log('✅ Пользователь создан:', telegramId);
+      } else {
+        console.error('❌ Ошибка создания пользователя:', error);
+      }
+    }
+  } catch (e) {
+    console.error('❌ Ошибка в ensureUserExists:', e);
+  }
+}
+
 /* ---------- получение shop_id текущего пользователя ---------- */
 let cachedShopId: string | null = null;
 
@@ -43,6 +90,10 @@ export async function getCurrentShopId(): Promise<string | null> {
       const shopId = startParam.replace('shop_', '');
       cachedShopId = shopId;
       console.log('🔍 shop_id из URL:', shopId);
+      
+      // ✅ СЮДА НУЖНО ДОБАВИТЬ
+      await ensureUserExists(shopId);
+      
       return shopId;
     }
   } catch (e) {
