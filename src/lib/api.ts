@@ -180,14 +180,6 @@ export async function fetchPromos(): Promise<Promo[]> {
   });
 }
 
-type SpecRow = {
-  id: string;
-  full_name: string;
-  photo_url: string | null;
-  rating: number;
-  specialist_services: { price: number }[] | null;
-};
-
 export async function fetchSpecialists(): Promise<SpecialistCard[]> {
   return cached("specialists", CATALOG_TTL, async () => {
     const shopId = await getCurrentShopId();
@@ -202,16 +194,6 @@ export async function fetchSpecialists(): Promise<SpecialistCard[]> {
   });
 }
 
-type CatRow = { id: string; parent_id: string | null; name: string; image_url: string | null };
-type SvcRow = {
-  id: string;
-  name: string;
-  image_url: string | null;
-  duration_min: number;
-  category_id: string;
-  specialist_services: { price: number }[] | null;
-};
-
 export async function fetchCategoryView(
   topId: string,
 ): Promise<{ chips: Chip[]; services: ServiceCard[] }> {
@@ -219,7 +201,6 @@ export async function fetchCategoryView(
     const shopId = await getCurrentShopId();
     if (!shopId) return { chips: [], services: [] };
     
-    // ✅ Получаем все категории через CRM
     const resCats = await fetch(
       `${API}/api/categories?shop_id=${shopId}&initData=${encodeURIComponent(initData())}`
     );
@@ -227,7 +208,6 @@ export async function fetchCategoryView(
     const catsResult = await resCats.json();
     const cats = catsResult.ok ? catsResult.data : [];
     
-    // ✅ Получаем все услуги через CRM (нужен новый эндпоинт!)
     const resServices = await fetch(
       `${API}/api/services?shop_id=${shopId}&category_id=${topId}&initData=${encodeURIComponent(initData())}`
     );
@@ -235,8 +215,9 @@ export async function fetchCategoryView(
     const servicesResult = await resServices.json();
     const allServices = servicesResult.ok ? servicesResult.data : [];
     
-    // ... логика формирования chips и services остаётся той же
-    const byId = new Map(cats.map((c: any) => [c.id, c]));
+    const byId = new Map<string, any>();
+    cats.forEach((c: any) => byId.set(c.id, c));
+    
     const descendants = new Set<string>();
     const collect = (parent: string) => {
       for (const c of cats) {
@@ -280,17 +261,6 @@ export async function fetchCategoryView(
   });
 }
 
-type MasterRow = {
-  price: number;
-  specialist: {
-    id: string;
-    full_name: string;
-    photo_url: string | null;
-    rating: number;
-    is_active: boolean;
-  } | null;
-};
-
 export async function fetchServiceDetail(
   serviceId: string,
 ): Promise<{ service: ServiceDetail; masters: Master[] } | null> {
@@ -298,7 +268,6 @@ export async function fetchServiceDetail(
     const shopId = await getCurrentShopId();
     if (!shopId) return null;
     
-    // Получаем детали услуги
     const res = await fetch(
       `${API}/api/services/detail?shop_id=${shopId}&service_id=${serviceId}&initData=${encodeURIComponent(initData())}`
     );
@@ -307,6 +276,7 @@ export async function fetchServiceDetail(
     return result.ok ? result.data : null;
   });
 }
+
 /* ---------- запись ---------- */
 const API = import.meta.env.VITE_API_URL as string;
 const initData = () => window.Telegram?.WebApp?.initData ?? "";
@@ -327,9 +297,8 @@ export async function fetchSlots(
   specialistId: string,
   serviceId: string,
   dateStr: string,
-  busyRanges: { starts_at: string; ends_at: string }[] = [],
+  _busyRanges: { starts_at: string; ends_at: string }[] = [],
 ) {
-  // Используем существующий эндпоинт /api/day-slots
   const res = await fetch(
     `${API}/api/day-slots?specialist=${specialistId}&service=${serviceId}&date=${dateStr}`
   );
@@ -412,18 +381,6 @@ export type Review = {
   created_at: string;
   client_name: string;
   service_name: string | null;
-};
-
-type SSItem = {
-  price: number;
-  service: { id: string; name: string; duration_min: number; is_active: boolean } | null;
-};
-type RevRow = {
-  specialist_rating: number;
-  comment: string | null;
-  created_at: string;
-  client_name: string | null;
-  service: { name: string } | null;
 };
 
 export async function fetchSpecialistDetail(id: string): Promise<{
@@ -730,7 +687,6 @@ export async function checkBonusAccess(): Promise<{
       return { canUse: false, message: "Салон не найден" };
     }
     
-    // Используем существующий эндпоинт /api/loyalty
     const res = await fetch(`${API}/api/loyalty?initData=${encodeURIComponent(initData())}`);
     if (!res.ok) {
       return { canUse: false, message: "Не удалось проверить доступ" };
@@ -740,7 +696,6 @@ export async function checkBonusAccess(): Promise<{
       return { canUse: false, message: "Бонусы недоступны" };
     }
     
-    // Здесь можно добавить проверку на подписку салона, если нужно
     return { canUse: true, message: "Бонусы доступны" };
   } catch {
     return { canUse: false, message: "Произошла ошибка" };
@@ -755,7 +710,6 @@ export async function apiLoyalty(): Promise<{ status: number; data: LoyaltyData 
     return { status: 0, data: null };
   }
 }
-
 
 /* ---------- сертификаты ---------- */
 export type CertItem = { id: string; code: string; balance: number; status: string; expires_at: string | null; usable: boolean };
@@ -802,7 +756,6 @@ export async function apiUnsubscribe(broadcastId: string | null): Promise<{
     return { status: 0, data: null };
   }
 }
-
 
 /* ---------- перенос записи ---------- */
 export async function apiRescheduleStart(bookingId: string): Promise<{
@@ -1051,8 +1004,8 @@ export type ShopProduct = {
   photo_url: string | null;
   description: string | null;
   price: number;
-  face_value: number | null;      // номинал сертификата
-  validity_days: number | null;   // сколько дней действует
+  face_value: number | null;
+  validity_days: number | null;
 };
 
 export async function fetchShop(): Promise<ShopProduct[]> {
@@ -1136,7 +1089,6 @@ export type DaySlot = {
   is_free: boolean;
 };
 
-/** Все слоты дня — свободные и занятые (на занятые можно встать в очередь) */
 export async function fetchDaySlots(
   specialistId: string,
   serviceId: string,
