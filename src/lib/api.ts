@@ -81,29 +81,47 @@ let cachedShopId: string | null = null;
 export async function getCurrentShopId(): Promise<string | null> {
   // 1. Проверяем кэш
   if (cachedShopId !== null) return cachedShopId;
+
+  // 🔥 ЛОГИРУЕМ ВСЁ
+  console.log('🔍 window.location:', window.location);
+  console.log('🔍 window.location.hash:', window.location.hash);
+  console.log('🔍 window.location.search:', window.location.search);
   
-  // 2. Пробуем получить shop_id из URL (параметр start от Telegram)
+  // 2. Пробуем получить shop_id из start_param (Telegram WebApp)
   try {
-  const hash = window.location.hash;
-  if (hash) {
-    const params = new URLSearchParams(hash.split('?')[1] || '');
-    const startParam = params.get('start');
+    const initData = window.Telegram?.WebApp?.initData || "";
+    const params = new URLSearchParams(initData);
+    const startParam = params.get('start_param');
     if (startParam && startParam.startsWith('shop_')) {
       const shopId = startParam.replace('shop_', '');
       cachedShopId = shopId;
-      console.log('🔍 shop_id из хэша URL:', shopId);
-      
-      // ✅ СОЗДАЁМ ПОЛЬЗОВАТЕЛЯ
+      console.log('🔍 shop_id из start_param:', shopId);
       await ensureUserExists(shopId);
-      
       return shopId;
     }
-  }
-} catch (e) {
+  } catch (e) {
     // Игнорируем ошибки
   }
   
-  // 3. Пробуем получить shop_id из initData (для старых пользователей)
+  // 3. Пробуем получить shop_id из хэша (старый способ)
+  try {
+    const hash = window.location.hash;
+    if (hash) {
+      const params = new URLSearchParams(hash.split('?')[1] || '');
+      const startParam = params.get('start');
+      if (startParam && startParam.startsWith('shop_')) {
+        const shopId = startParam.replace('shop_', '');
+        cachedShopId = shopId;
+        console.log('🔍 shop_id из хэша URL:', shopId);
+        await ensureUserExists(shopId);
+        return shopId;
+      }
+    }
+  } catch (e) {
+    // Игнорируем ошибки
+  }
+  
+  // 4. Пробуем получить shop_id из initData (для старых пользователей)
   try {
     const initData = window.Telegram?.WebApp?.initData || "";
     const params = new URLSearchParams(initData);
