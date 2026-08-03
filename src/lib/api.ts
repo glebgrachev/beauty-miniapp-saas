@@ -747,6 +747,56 @@ export type LoyaltyData = {
   transactions: LoyaltyTx[];
 };
 
+export async function checkBonusAccess(): Promise<{
+  canUse: boolean;
+  message: string;
+}> {
+  try {
+    const shopId = await getCurrentShopId();
+    if (!shopId) {
+      return { 
+        canUse: false, 
+        message: "Салон не найден" 
+      };
+    }
+    
+    const { data: shop, error } = await supabase
+      .from("shops")
+      .select("plan_id, subscription_expires_at")
+      .eq("id", shopId)
+      .single();
+    
+    if (error || !shop) {
+      return { 
+        canUse: false, 
+        message: "Не удалось проверить доступ" 
+      };
+    }
+    
+    const isPaid = shop.plan_id !== 1;
+    const isActive = shop.subscription_expires_at 
+      ? new Date(shop.subscription_expires_at) > new Date()
+      : false;
+    
+    if (isPaid && isActive) {
+      return { 
+        canUse: true, 
+        message: "Бонусы доступны" 
+      };
+    }
+    
+    return { 
+      canUse: false, 
+      message: "Использование бонусов ограничено. Обратитесь в салон." 
+    };
+  } catch {
+    return { 
+      canUse: false, 
+      message: "Произошла ошибка" 
+    };
+  }
+}
+
 export async function apiLoyalty(): Promise<{ status: number; data: LoyaltyData | null }> {
   try {
     const res = await fetch(`${API}/api/loyalty?initData=${encodeURIComponent(initData())}`);
@@ -755,6 +805,7 @@ export async function apiLoyalty(): Promise<{ status: number; data: LoyaltyData 
     return { status: 0, data: null };
   }
 }
+
 
 /* ---------- сертификаты ---------- */
 export type CertItem = { id: string; code: string; balance: number; status: string; expires_at: string | null; usable: boolean };
