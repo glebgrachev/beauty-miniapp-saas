@@ -1,4 +1,3 @@
-Смотри, вот был код файла api, который показывал услуги, матеров, но не расписание. Потом мы начали шуровать и все пропало совсем.
 import { supabase } from "./supabase";
 import type {
   Category,
@@ -29,7 +28,7 @@ export function clearCatalogCache() {
   _cache.clear();
 }
 
-// ✅ ВСТАВЛЯЕМ СЮДА
+// ✅ СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ
 async function ensureUserExists(shopId: string) {
   try {
     const initData = window.Telegram?.WebApp?.initData || "";
@@ -80,36 +79,47 @@ async function ensureUserExists(shopId: string) {
 let cachedShopId: string | null = null;
 
 export async function getCurrentShopId(): Promise<string | null> {
-  // 1. Проверяем кэш
   if (cachedShopId !== null) return cachedShopId;
 
-  // 🔥 ЛОГИРУЕМ ВСЁ
   console.log('🔍 window.location:', window.location);
   console.log('🔍 window.location.hash:', window.location.hash);
   console.log('🔍 window.location.search:', window.location.search);
   
-  // 2. Пробуем получить shop_id из URL (параметр start от Telegram)
+  // 1. Пробуем получить shop_id из start_param (Telegram WebApp)
   try {
-  const hash = window.location.hash;
-  if (hash) {
-    const params = new URLSearchParams(hash.split('?')[1] || '');
-    const startParam = params.get('start');
+    const initData = window.Telegram?.WebApp?.initData || "";
+    const params = new URLSearchParams(initData);
+    const startParam = params.get('start_param');
     if (startParam && startParam.startsWith('shop_')) {
       const shopId = startParam.replace('shop_', '');
       cachedShopId = shopId;
-      console.log('🔍 shop_id из хэша URL:', shopId);
-      
-      // ✅ СОЗДАЁМ ПОЛЬЗОВАТЕЛЯ
+      console.log('🔍 shop_id из start_param:', shopId);
       await ensureUserExists(shopId);
-      
       return shopId;
     }
-  }
-} catch (e) {
+  } catch (e) {
     // Игнорируем ошибки
   }
   
-  // 3. Пробуем получить shop_id из initData (для старых пользователей)
+  // 2. Пробуем получить shop_id из хэша (старый способ)
+  try {
+    const hash = window.location.hash;
+    if (hash) {
+      const params = new URLSearchParams(hash.split('?')[1] || '');
+      const startParam = params.get('start');
+      if (startParam && startParam.startsWith('shop_')) {
+        const shopId = startParam.replace('shop_', '');
+        cachedShopId = shopId;
+        console.log('🔍 shop_id из хэша URL:', shopId);
+        await ensureUserExists(shopId);
+        return shopId;
+      }
+    }
+  } catch (e) {
+    // Игнорируем ошибки
+  }
+  
+  // 3. Пробуем получить shop_id из БД (для старых пользователей)
   try {
     const initData = window.Telegram?.WebApp?.initData || "";
     const params = new URLSearchParams(initData);
@@ -139,6 +149,8 @@ export async function getCurrentShopId(): Promise<string | null> {
   console.log('⚠️ shop_id не найден');
   return null;
 }
+
+/* ---------- СПРАВОЧНИКИ (прямые запросы в Supabase) ---------- */
 
 export async function fetchCategories(): Promise<Category[]> {
   return cached("categories", CATALOG_TTL, async () => {
@@ -231,7 +243,6 @@ export async function fetchCategoryView(
     const cats = (catsData as CatRow[]) ?? [];
     const byId = new Map(cats.map((c) => [c.id, c]));
 
-    // потомки верхней категории
     const descendants = new Set<string>();
     const collect = (parent: string) => {
       for (const c of cats) {
@@ -247,7 +258,6 @@ export async function fetchCategoryView(
       .filter((c) => c.parent_id === topId)
       .map((c) => ({ id: c.id, name: c.name, image_url: c.image_url }));
 
-    // ветка верхнего уровня (прямой потомок topId) для услуги
     const branchOf = (catId: string): string | null => {
       let cur: string | undefined = catId;
       let guard = 0;
@@ -332,10 +342,8 @@ export async function fetchServiceDetail(
     return { service: svc as ServiceDetail, masters };
   });
 }
-/* ---------- запись ---------- */
-const API = import.meta.env.VITE_API_URL as string;
-const initData = () => window.Telegram?.WebApp?.initData ?? "";
 
+/* ---------- КОНТЕКСТ БРОНИРОВАНИЯ (прямой запрос в Supabase) ---------- */
 export async function fetchBookingContext(serviceId: string, specialistId: string) {
   const shopId = await getCurrentShopId();
   
@@ -356,24 +364,24 @@ export async function fetchBookingContext(serviceId: string, specialistId: strin
   };
 }
 
+/* ---------- API для работы с CRM (слоты, бронирование) ---------- */
+const API = import.meta.env.VITE_API_URL as string;
+const initData = () => window.Telegram?.WebApp?.initData ?? "";
+
+/* ---------- СЛОТЫ (через CRM) ---------- */
 export async function fetchSlots(
   specialistId: string,
   serviceId: string,
   dateStr: string,
   busyRanges: { starts_at: string; ends_at: string }[] = [],
 ) {
-  // формат tstzrange для Postgres: '[start,end)'
-  const p_busy_ranges =
-    busyRanges.length > 0 ? busyRanges.map((r) => `[${r.starts_at},${r.ends_at})`) : null;
-
-  const { data, error } = await supabase.rpc("get_available_slots", {
-    p_specialist_id: specialistId,
-    p_service_id: serviceId,
-    p_date: dateStr,
-    p_busy_ranges,
-  });
-  if (error) return [];
-  return (data as { slot_start: string; slot_end: string }[]) ?? [];
+  // Используем существующий эндпоинт /api/day-slots в CRM
+  const res = await fetch(
+    `${API}/api/day-slots?specialist=${specialistId}&service=${serviceId}&date=${dateStr}`
+  );
+  if (!res.ok) return [];
+  const result = await res.json();
+  return result.ok ? result.slots : [];
 }
 
 export type PriceResult = {
@@ -433,7 +441,7 @@ export async function apiConfirm(bookingId: string) {
   }
 }
 
-/* ---------- экран мастера ---------- */
+/* ---------- ЭКРАН МАСТЕРА (прямой запрос в Supabase) ---------- */
 export type SpecialistFull = {
   id: string;
   full_name: string;
@@ -473,6 +481,9 @@ export async function fetchSpecialistDetail(id: string): Promise<{
 }> {
   return cached(`specialistDetail:${id}`, CATALOG_TTL, async () => {
     const shopId = await getCurrentShopId();
+    if (!shopId) {
+      return { specialist: null, services: [], works: [], reviews: [], reviewCount: 0 };
+    }
     
     const [spRes, ssRes, wRes, rRes] = await Promise.all([
       supabase
@@ -527,7 +538,34 @@ export async function fetchSpecialistDetail(id: string): Promise<{
   });
 }
 
-/* ---------- корзина: расчёт ---------- */
+/* ---------- МАСТЕРА ДЛЯ УСЛУГИ (прямой запрос в Supabase) ---------- */
+export type ServiceMaster = { id: string; full_name: string; photo_url: string | null; rating: number; price: number };
+
+export async function fetchServiceMasters(serviceId: string): Promise<ServiceMaster[]> {
+  return cached(`serviceMasters:${serviceId}`, CATALOG_TTL, async () => {
+    const shopId = await getCurrentShopId();
+    if (!shopId) return [];
+    
+    const { data } = await supabase
+      .from("specialist_services")
+      .select("price, specialist:specialists ( id, full_name, photo_url, rating, is_active )")
+      .eq("service_id", serviceId)
+      .eq("shop_id", shopId);
+    type Row = { price: number; specialist: { id: string; full_name: string; photo_url: string | null; rating: number; is_active: boolean } | null };
+    return ((data as unknown as Row[]) ?? [])
+      .filter((r) => r.specialist?.is_active)
+      .map((r) => ({
+        id: r.specialist!.id,
+        full_name: r.specialist!.full_name,
+        photo_url: r.specialist!.photo_url,
+        rating: r.specialist!.rating,
+        price: r.price,
+      }))
+      .sort((a, b) => b.rating - a.rating);
+  });
+}
+
+/* ---------- КОРЗИНА (через CRM) ---------- */
 export type CartPriceItem = {
   service_id: string;
   specialist_id: string;
@@ -567,7 +605,7 @@ export async function apiPriceCart(
   }
 }
 
-/* ---------- отзыв ---------- */
+/* ---------- ОТЗЫВЫ (через CRM) ---------- */
 export type ReviewContext = {
   service: string | null;
   specialist: string | null;
@@ -616,7 +654,7 @@ export async function apiSubmitReview(
   }
 }
 
-/* ---------- мои записи / отмена ---------- */
+/* ---------- МОИ ЗАПИСИ (через CRM) ---------- */
 export type MyBooking = {
   id: string;
   status: string;
@@ -670,7 +708,7 @@ export async function apiCancelBooking(bookingId: string) {
   }
 }
 
-/* ---------- избранное ---------- */
+/* ---------- ИЗБРАННОЕ (через CRM) ---------- */
 export type FavSpecialist = { id: string; full_name: string; photo_url: string | null; rating: number };
 export type FavService = { id: string; name: string; duration_min: number; image_url: string | null };
 
@@ -702,7 +740,7 @@ export async function apiToggleFavorite(
   }
 }
 
-/* ---------- мои отзывы ---------- */
+/* ---------- МОИ ОТЗЫВЫ (через CRM) ---------- */
 export type MyReview = {
   id: string;
   booking_id: string;
@@ -731,34 +769,7 @@ export async function apiMyReviews(): Promise<{
   }
 }
 
-/* ---------- мастера для услуги (для подарка в корзине) ---------- */
-export type ServiceMaster = { id: string; full_name: string; photo_url: string | null; rating: number; price: number };
-
-export async function fetchServiceMasters(serviceId: string): Promise<ServiceMaster[]> {
-  return cached(`serviceMasters:${serviceId}`, CATALOG_TTL, async () => {
-    const shopId = await getCurrentShopId();
-    if (!shopId) return [];
-    
-    const { data } = await supabase
-      .from("specialist_services")
-      .select("price, specialist:specialists ( id, full_name, photo_url, rating, is_active )")
-      .eq("service_id", serviceId)
-      .eq("shop_id", shopId);
-    type Row = { price: number; specialist: { id: string; full_name: string; photo_url: string | null; rating: number; is_active: boolean } | null };
-    return ((data as unknown as Row[]) ?? [])
-      .filter((r) => r.specialist?.is_active)
-      .map((r) => ({
-        id: r.specialist!.id,
-        full_name: r.specialist!.full_name,
-        photo_url: r.specialist!.photo_url,
-        rating: r.specialist!.rating,
-        price: r.price,
-      }))
-      .sort((a, b) => b.rating - a.rating);
-  });
-}
-
-/* ---------- оформление заказа (корзина) ---------- */
+/* ---------- ОФОРМЛЕНИЕ ЗАКАЗА (через CRM) ---------- */
 export type BookCartItem = {
   service_id: string;
   specialist_id: string;
@@ -789,7 +800,7 @@ export async function apiBookCart(
   }
 }
 
-/* ---------- лояльность (баллы) ---------- */
+/* ---------- ЛОЯЛЬНОСТЬ (через CRM) ---------- */
 export type LoyaltyTx = {
   kind: "accrual" | "redemption" | "adjustment";
   points: number;
@@ -814,46 +825,21 @@ export async function checkBonusAccess(): Promise<{
   try {
     const shopId = await getCurrentShopId();
     if (!shopId) {
-      return { 
-        canUse: false, 
-        message: "Салон не найден" 
-      };
+      return { canUse: false, message: "Салон не найден" };
     }
     
-    const { data: shop, error } = await supabase
-      .from("shops")
-      .select("plan_id, subscription_expires_at")
-      .eq("id", shopId)
-      .single();
-    
-    if (error || !shop) {
-      return { 
-        canUse: false, 
-        message: "Не удалось проверить доступ" 
-      };
+    const res = await fetch(`${API}/api/loyalty?initData=${encodeURIComponent(initData())}`);
+    if (!res.ok) {
+      return { canUse: false, message: "Не удалось проверить доступ" };
+    }
+    const result = await res.json();
+    if (!result.ok) {
+      return { canUse: false, message: "Бонусы недоступны" };
     }
     
-    const isPaid = shop.plan_id !== 1;
-    const isActive = shop.subscription_expires_at 
-      ? new Date(shop.subscription_expires_at) > new Date()
-      : false;
-    
-    if (isPaid && isActive) {
-      return { 
-        canUse: true, 
-        message: "Бонусы доступны" 
-      };
-    }
-    
-    return { 
-      canUse: false, 
-      message: "Использование бонусов ограничено. Обратитесь в салон." 
-    };
+    return { canUse: true, message: "Бонусы доступны" };
   } catch {
-    return { 
-      canUse: false, 
-      message: "Произошла ошибка" 
-    };
+    return { canUse: false, message: "Произошла ошибка" };
   }
 }
 
@@ -866,8 +852,7 @@ export async function apiLoyalty(): Promise<{ status: number; data: LoyaltyData 
   }
 }
 
-
-/* ---------- сертификаты ---------- */
+/* ---------- СЕРТИФИКАТЫ (через CRM) ---------- */
 export type CertItem = { id: string; code: string; balance: number; status: string; expires_at: string | null; usable: boolean };
 export type CertData = { ok: boolean; balance: number; certificates: CertItem[] };
 
@@ -896,7 +881,7 @@ export async function apiActivateCertificate(code: string): Promise<{
   }
 }
 
-/* ---------- отписка от промо-рассылок ---------- */
+/* ---------- ОТПИСКА (через CRM) ---------- */
 export async function apiUnsubscribe(broadcastId: string | null): Promise<{
   status: number;
   data: { ok: boolean; error?: string } | null;
@@ -913,8 +898,7 @@ export async function apiUnsubscribe(broadcastId: string | null): Promise<{
   }
 }
 
-
-/* ---------- перенос записи ---------- */
+/* ---------- ПЕРЕНОС ЗАПИСИ (через CRM) ---------- */
 export async function apiRescheduleStart(bookingId: string): Promise<{
   status: number;
   data: { ok: boolean; error?: string; orig_starts_at?: string; max_forward_days?: number; expire_pending_minutes?: number } | null;
@@ -973,7 +957,6 @@ export async function apiRescheduleConfirm(
 }
 
 /* ================= КАБИНЕТ МАСТЕРА ================= */
-
 export type MasterMe = {
   ok: boolean;
   specialist_id?: string;
@@ -1153,7 +1136,6 @@ export async function fetchSpecialistDocs(specialistId: string): Promise<PublicD
 }
 
 /* ================= МАГАЗИН ================= */
-
 export type ShopProduct = {
   id: string;
   kind: "sale" | "certificate";
@@ -1161,8 +1143,8 @@ export type ShopProduct = {
   photo_url: string | null;
   description: string | null;
   price: number;
-  face_value: number | null;      // номинал сертификата
-  validity_days: number | null;   // сколько дней действует
+  face_value: number | null;
+  validity_days: number | null;
 };
 
 export async function fetchShop(): Promise<ShopProduct[]> {
@@ -1239,14 +1221,12 @@ export async function apiCancelReservation(saleId: string): Promise<{
 }
 
 /* ================= ЛИСТ ОЖИДАНИЯ ================= */
-
 export type DaySlot = {
   slot_start: string;
   slot_end: string;
   is_free: boolean;
 };
 
-/** Все слоты дня — свободные и занятые (на занятые можно встать в очередь) */
 export async function fetchDaySlots(
   specialistId: string,
   serviceId: string,
