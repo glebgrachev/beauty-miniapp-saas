@@ -442,12 +442,22 @@ export async function apiPrice(
 }
 
 export async function apiBook(serviceId: string, specialistId: string, startsAt: string, points = 0, cert = 0, certId: string | null = null) {
+  // ✅ ПОЛУЧАЕМ shop_id (ЭТО НОВАЯ СТРОКА)
+  const shopId = await getCurrentShopId();
+
+  // ✅ ПРОВЕРЯЕМ shop_id (ЭТО НОВАЯ СТРОКА)
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/book`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         initData: initData(),
+        shop_id: shopId, // ← ЭТО НОВАЯ СТРОКА
         service_id: serviceId,
         specialist_id: specialistId,
         starts_at: startsAt,
@@ -822,58 +832,32 @@ export async function apiBookCart(
   status: number;
   data: { ok: boolean; order_id?: string; busy?: number[]; error?: string } | null;
 }> {
+  // ✅ ПОЛУЧАЕМ shop_id (ЭТО НОВАЯ СТРОКА)
+  const shopId = await getCurrentShopId();
+
+  // ✅ ПРОВЕРЯЕМ shop_id (ЭТО НОВАЯ СТРОКА)
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/book-cart`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), items, points, cert, cert_id: certId, products }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId, // ← ЭТО НОВАЯ СТРОКА
+        items,
+        points,
+        cert,
+        cert_id: certId,
+        products,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
     return { status: 0, data: null };
-  }
-}
-
-/* ---------- ЛОЯЛЬНОСТЬ (через CRM) ---------- */
-export type LoyaltyTx = {
-  kind: "accrual" | "redemption" | "adjustment";
-  points: number;
-  note: string | null;
-  created_at: string;
-};
-export type LoyaltyData = {
-  ok: boolean;
-  balance: number;
-  total_earned: number;
-  total_spent: number;
-  cashback_percent: number;
-  redeem_max_percent: number;
-  point_value: number;
-  transactions: LoyaltyTx[];
-};
-
-export async function checkBonusAccess(): Promise<{
-  canUse: boolean;
-  message: string;
-}> {
-  try {
-    const shopId = await getCurrentShopId();
-    if (!shopId) {
-      return { canUse: false, message: "Салон не найден" };
-    }
-    
-    const res = await fetch(`${API}/api/loyalty?initData=${encodeURIComponent(initData())}`);
-    if (!res.ok) {
-      return { canUse: false, message: "Не удалось проверить доступ" };
-    }
-    const result = await res.json();
-    if (!result.ok) {
-      return { canUse: false, message: "Бонусы недоступны" };
-    }
-    
-    return { canUse: true, message: "Бонусы доступны" };
-  } catch {
-    return { canUse: false, message: "Произошла ошибка" };
   }
 }
 
