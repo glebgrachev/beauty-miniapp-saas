@@ -2822,7 +2822,7 @@ function ScheduleScreen({
   const [giftSpec, setGiftSpec] = useState<Record<string, ServiceMaster>>({});
   const [masters, setMasters] = useState<ServiceMaster[] | null>(null);
   const [date, setDate] = useState(days[0].dateStr);
-  const [slots, setSlots] = useState<{ slot_start: string; slot_end: string }[]>([]);
+  const [slots, setSlots] = useState<{ slot_start: string; slot_end: string; is_free: boolean }[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(true);
   const [slot, setSlot] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
