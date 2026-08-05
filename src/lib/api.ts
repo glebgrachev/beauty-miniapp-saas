@@ -373,7 +373,7 @@ export async function fetchSlots(
   specialistId: string,
   serviceId: string,
   dateStr: string,
-  busyRanges: { starts_at: string; ends_at: string }[] = [],
+  _busyRanges: { starts_at: string; ends_at: string }[] = [],
 ) {
   // Используем существующий эндпоинт /api/day-slots в CRM
   const res = await fetch(
