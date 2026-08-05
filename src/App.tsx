@@ -481,6 +481,19 @@ function certDate(iso: string) {
   return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", year: "2-digit", timeZone: "Europe/Moscow" }).format(new Date(iso));
 }
 
+// ✅ ДОБАВЛЕНА ФУНКЦИЯ formatLocalTime
+function formatLocalTime(iso: string) {
+  const d = new Date(iso);
+  return new Intl.DateTimeFormat("ru-RU", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    // БЕЗ timeZone — показываем как есть
+  }).format(d);
+}
+
 function CertPicker({
   certs,
   maxMoney,
@@ -1621,7 +1634,6 @@ function BookingsScreen({
     </div>
   );
 }
-
 
 /* ---------- RESCHEDULE (перенос записи: мастер + дата + время) ---------- */
 function RescheduleScreen({
@@ -2971,20 +2983,21 @@ function ScheduleScreen({
     }
   }
 
+  // занятость внутри заказа (тот же мастер) + занятые слоты из БД
   const busy = resolvedSpec
-  ? Object.entries(chosen)
-      .filter(([k, c]) => c.specialist_id === resolvedSpec.id && k !== pos?.key)
-      .map((e) => [Date.parse(e[1].starts_at), Date.parse(e[1].ends_at)] as [number, number])
-  : [];
-const availSlots = slots.filter((sl) => {
-  // ✅ Если слот занят в БД — не показываем
-  if (!sl.is_free) return false;
-  
-  // ✅ Если слот занят в корзине — не показываем
-  const s = Date.parse(sl.slot_start);
-  const e = Date.parse(sl.slot_end);
-  return !busy.some(([bs, be]) => s < be && e > bs);
-});
+    ? Object.entries(chosen)
+        .filter(([k, c]) => c.specialist_id === resolvedSpec.id && k !== pos?.key)
+        .map((e) => [Date.parse(e[1].starts_at), Date.parse(e[1].ends_at)] as [number, number])
+    : [];
+  const availSlots = slots.filter((sl) => {
+    // ✅ Если слот занят в БД — не показываем
+    if (!sl.is_free) return false;
+    
+    // ✅ Если слот занят в корзине — не показываем
+    const s = Date.parse(sl.slot_start);
+    const e = Date.parse(sl.slot_end);
+    return !busy.some(([bs, be]) => s < be && e > bs);
+  });
 
   if (N === 0) {
     return (
@@ -3297,7 +3310,6 @@ function ConfirmScreen({ bookingId, onHome }: { bookingId: string; onHome: () =>
     </div>
   );
 }
-
 
 /* строка товара/сертификата в корзине */
 function CartProductRow({
