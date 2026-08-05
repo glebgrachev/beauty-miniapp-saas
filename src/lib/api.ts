@@ -420,6 +420,13 @@ export async function fetchSlots(
   return result.ok ? result.slots : [];
 }
 
+export type PriceResult = {
+  full_price: number;
+  discount_amount: number;
+  final_price: number;
+  promo_title: string | null;
+};
+
 export async function apiPrice(
   serviceId: string,
   specialistId: string,
@@ -467,6 +474,29 @@ export async function apiBook(serviceId: string, specialistId: string, startsAt:
         points,
         cert,
         cert_id: certId,
+      }),
+    });
+    return { status: res.status, data: await res.json().catch(() => null) };
+  } catch {
+    return { status: 0, data: null };
+  }
+}
+
+export async function apiConfirm(bookingId: string) {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
+  try {
+    const res = await fetch(`${API}/api/confirm`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        booking_id: bookingId,
       }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
