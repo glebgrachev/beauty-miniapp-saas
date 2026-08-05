@@ -481,18 +481,7 @@ function certDate(iso: string) {
   return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", year: "2-digit", timeZone: "Europe/Moscow" }).format(new Date(iso));
 }
 
-// ✅ ДОБАВЛЕНА ФУНКЦИЯ formatLocalTime
-function formatLocalTime(iso: string) {
-  const d = new Date(iso);
-  return new Intl.DateTimeFormat("ru-RU", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-    // БЕЗ timeZone — показываем как есть
-  }).format(d);
-}
+// 
 
 function CertPicker({
   certs,
