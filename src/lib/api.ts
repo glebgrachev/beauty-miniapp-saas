@@ -31,31 +31,54 @@ export function clearCatalogCache() {
 // ✅ СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ
 async function ensureUserExists(shopId: string) {
   try {
+    console.log('🔥 ensureUserExists called with shopId:', shopId);
+    
     const initData = window.Telegram?.WebApp?.initData || "";
+    console.log('🔥 initData length:', initData.length);
+    
     const params = new URLSearchParams(initData);
     const userJson = params.get("user");
-    if (!userJson) return;
+    console.log('🔥 userJson exists:', !!userJson);
+    
+    if (!userJson) {
+      console.warn('⚠️ userJson is null, skipping');
+      return;
+    }
     
     const user = JSON.parse(decodeURIComponent(userJson));
+    console.log('🔥 user:', user);
+    
     const telegramId = user.id;
     const firstName = user.first_name || '';
     const lastName = user.last_name || '';
     const username = user.username || '';
     
-    const { data: existing } = await supabase
+    console.log('🔥 Checking if user exists in Supabase...');
+    const { data: existing, error: selectError } = await supabase
       .from("users")
       .select("telegram_id")
       .eq("telegram_id", telegramId)
       .maybeSingle();
     
+    if (selectError) {
+      console.error('❌ Ошибка при проверке пользователя:', selectError);
+    }
+    
     if (existing) {
-      await supabase
+      console.log('✅ Пользователь найден, обновляем shop_id...');
+      const { error: updateError } = await supabase
         .from("users")
         .update({ shop_id: Number(shopId) })
         .eq("telegram_id", telegramId);
-      console.log('✅ Обновлён shop_id для пользователя:', telegramId);
+      
+      if (updateError) {
+        console.error('❌ Ошибка обновления shop_id:', updateError);
+      } else {
+        console.log('✅ Обновлён shop_id для пользователя:', telegramId);
+      }
     } else {
-      const { error } = await supabase
+      console.log('✅ Пользователь не найден, создаём...');
+      const { error: insertError } = await supabase
         .from("users")
         .insert({
           telegram_id: telegramId,
@@ -64,10 +87,11 @@ async function ensureUserExists(shopId: string) {
           username: username,
           shop_id: Number(shopId),
         });
-      if (!error) {
-        console.log('✅ Пользователь создан:', telegramId);
+      
+      if (insertError) {
+        console.error('❌ Ошибка создания пользователя:', insertError);
       } else {
-        console.error('❌ Ошибка создания пользователя:', error);
+        console.log('✅ Пользователь создан:', telegramId);
       }
     }
   } catch (e) {
