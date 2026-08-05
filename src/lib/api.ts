@@ -405,8 +405,11 @@ export async function fetchSlots(
   dateStr: string,
   _busyRanges: { starts_at: string; ends_at: string }[] = [],
 ) {
+  const shopId = await getCurrentShopId();
+  if (!shopId) return [];
+
   const res = await fetch(
-    `${API}/api/day-slots?specialist=${specialistId}&service=${serviceId}&date=${dateStr}`
+    `${API}/api/day-slots?shop_id=${shopId}&specialist=${specialistId}&service=${serviceId}&date=${dateStr}&initData=${encodeURIComponent(initData())}`
   );
   if (!res.ok) return [];
   const result = await res.json();
@@ -424,11 +427,22 @@ export async function apiPrice(
   serviceId: string,
   specialistId: string,
 ): Promise<{ status: number; data: PriceResult | null }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/price`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), service_id: serviceId, specialist_id: specialistId }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        service_id: serviceId,
+        specialist_id: specialistId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -465,11 +479,21 @@ export async function apiBook(serviceId: string, specialistId: string, startsAt:
 }
 
 export async function apiConfirm(bookingId: string) {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/confirm`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), booking_id: bookingId }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        booking_id: bookingId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -629,11 +653,21 @@ export type CartPrice = {
 export async function apiPriceCart(
   items: { service_id: string; specialist_id: string }[],
 ): Promise<{ status: number; data: CartPrice | null }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/price-cart`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), items }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        items,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -656,9 +690,15 @@ export type ReviewContext = {
 export async function apiReviewContext(
   bookingId: string,
 ): Promise<{ status: number; data: (ReviewContext & { ok: boolean }) | null }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(
-      `${API}/api/review?booking_id=${encodeURIComponent(bookingId)}&initData=${encodeURIComponent(initData())}`,
+      `${API}/api/review?booking_id=${encodeURIComponent(bookingId)}&shop_id=${shopId}&initData=${encodeURIComponent(initData())}`
     );
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -672,12 +712,19 @@ export async function apiSubmitReview(
   serviceRating: number,
   comment: string,
 ) {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/review`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         initData: initData(),
+        shop_id: shopId,
         booking_id: bookingId,
         specialist_rating: specialistRating,
         service_rating: serviceRating,
@@ -719,7 +766,6 @@ export async function apiMyBookings(): Promise<{
   status: number;
   data: { ok: boolean; upcoming: MyBooking[]; past: MyBooking[]; active_reschedule: ActiveReschedule | null } | null;
 }> {
-  // ✅ ПОЛУЧАЕМ shop_id
   const shopId = await getCurrentShopId();
   if (!shopId) {
     console.error('❌ Не удалось определить shop_id');
@@ -732,7 +778,7 @@ export async function apiMyBookings(): Promise<{
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         initData: initData(),
-        shop_id: shopId, // ← ДОБАВЛЯЕМ
+        shop_id: shopId,
       }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
@@ -742,11 +788,21 @@ export async function apiMyBookings(): Promise<{
 }
 
 export async function apiCancelBooking(bookingId: string) {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/cancel-booking`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), booking_id: bookingId }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        booking_id: bookingId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -762,8 +818,16 @@ export async function apiFavoritesList(): Promise<{
   status: number;
   data: { ok: boolean; keys: string[]; specialists: FavSpecialist[]; services: FavService[] } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
-    const res = await fetch(`${API}/api/favorites?initData=${encodeURIComponent(initData())}`);
+    const res = await fetch(
+      `${API}/api/favorites?shop_id=${shopId}&initData=${encodeURIComponent(initData())}`
+    );
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
     return { status: 0, data: null };
@@ -774,11 +838,22 @@ export async function apiToggleFavorite(
   kind: "specialist" | "service",
   targetId: string,
 ): Promise<{ status: number; data: { ok: boolean; favorite: boolean } | null }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/favorites`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), kind, target_id: targetId }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        kind,
+        target_id: targetId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -803,11 +878,20 @@ export async function apiMyReviews(): Promise<{
   status: number;
   data: { ok: boolean; reviews: MyReview[] } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/my-reviews`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData() }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -889,7 +973,7 @@ export async function checkBonusAccess(): Promise<{
       return { canUse: false, message: "Салон не найден" };
     }
     
-    const res = await fetch(`${API}/api/loyalty?initData=${encodeURIComponent(initData())}`);
+    const res = await fetch(`${API}/api/loyalty?shop_id=${shopId}&initData=${encodeURIComponent(initData())}`);
     if (!res.ok) {
       return { canUse: false, message: "Не удалось проверить доступ" };
     }
@@ -905,8 +989,16 @@ export async function checkBonusAccess(): Promise<{
 }
 
 export async function apiLoyalty(): Promise<{ status: number; data: LoyaltyData | null }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
-    const res = await fetch(`${API}/api/loyalty?initData=${encodeURIComponent(initData())}`);
+    const res = await fetch(
+      `${API}/api/loyalty?shop_id=${shopId}&initData=${encodeURIComponent(initData())}`
+    );
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
     return { status: 0, data: null };
@@ -918,8 +1010,16 @@ export type CertItem = { id: string; code: string; balance: number; status: stri
 export type CertData = { ok: boolean; balance: number; certificates: CertItem[] };
 
 export async function apiCertificate(): Promise<{ status: number; data: CertData | null }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
-    const res = await fetch(`${API}/api/certificate?initData=${encodeURIComponent(initData())}`);
+    const res = await fetch(
+      `${API}/api/certificate?shop_id=${shopId}&initData=${encodeURIComponent(initData())}`
+    );
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
     return { status: 0, data: null };
@@ -930,11 +1030,21 @@ export async function apiActivateCertificate(code: string): Promise<{
   status: number;
   data: { ok: boolean; added?: number; balance?: number; error?: string } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/certificate`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), code }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        code,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -947,11 +1057,21 @@ export async function apiUnsubscribe(broadcastId: string | null): Promise<{
   status: number;
   data: { ok: boolean; error?: string } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/unsubscribe`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), broadcast_id: broadcastId }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        broadcast_id: broadcastId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -964,11 +1084,21 @@ export async function apiRescheduleStart(bookingId: string): Promise<{
   status: number;
   data: { ok: boolean; error?: string; orig_starts_at?: string; max_forward_days?: number; expire_pending_minutes?: number } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/reschedule-start`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), booking_id: bookingId }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        booking_id: bookingId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -980,11 +1110,21 @@ export async function apiRescheduleCancel(bookingId: string): Promise<{
   status: number;
   data: { ok: boolean; error?: string } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/reschedule-cancel`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), booking_id: bookingId }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        booking_id: bookingId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1000,12 +1140,19 @@ export async function apiRescheduleConfirm(
   status: number;
   data: { ok: boolean; error?: string; starts_at?: string; final_price?: number } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/reschedule-confirm`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         initData: initData(),
+        shop_id: shopId,
         booking_id: bookingId,
         specialist_id: specialistId,
         starts_at: startsAt,
@@ -1026,11 +1173,20 @@ export type MasterMe = {
 };
 
 export async function apiMasterWhoami(): Promise<{ status: number; data: MasterMe | null }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/master/whoami`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData() }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1042,11 +1198,21 @@ export async function apiMasterLink(payload: { contact?: string; code?: string }
   status: number;
   data: { ok: boolean; error?: string; full_name?: string } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/master/link`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), ...payload }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        ...payload,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1070,11 +1236,22 @@ export async function apiMasterBookings(from: string, to: string): Promise<{
   status: number;
   data: { ok: boolean; bookings: MasterBooking[] } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/master/bookings`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), from, to }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        from,
+        to,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1086,11 +1263,22 @@ export async function apiMasterMark(bookingId: string, status: "completed" | "no
   status: number;
   data: { ok: boolean; error?: string } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/master/mark`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), booking_id: bookingId, status }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        booking_id: bookingId,
+        status,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1111,11 +1299,22 @@ export async function apiMasterSchedule(from: string, to: string): Promise<{
   status: number;
   data: { ok: boolean; days: MasterDay[] } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/master/schedule`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), from, to }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        from,
+        to,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1138,11 +1337,22 @@ export async function apiMasterEarnings(from: string, to: string): Promise<{
   status: number;
   data: { ok: boolean; earnings: MasterEarnings } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/master/earnings`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), from, to }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        from,
+        to,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1164,11 +1374,20 @@ export async function apiMasterDocuments(): Promise<{
   status: number;
   data: { ok: boolean; documents: MasterDoc[] } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/master/documents`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData() }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1186,8 +1405,13 @@ export type PublicDoc = {
 };
 
 export async function fetchSpecialistDocs(specialistId: string): Promise<PublicDoc[]> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) return [];
+
   try {
-    const res = await fetch(`${API}/api/specialist-docs?id=${encodeURIComponent(specialistId)}`);
+    const res = await fetch(
+      `${API}/api/specialist-docs?shop_id=${shopId}&id=${encodeURIComponent(specialistId)}&initData=${encodeURIComponent(initData())}`
+    );
     if (!res.ok) return [];
     const j = (await res.json()) as { ok?: boolean; documents?: PublicDoc[] };
     return j.ok ? (j.documents ?? []) : [];
@@ -1209,8 +1433,13 @@ export type ShopProduct = {
 };
 
 export async function fetchShop(): Promise<ShopProduct[]> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) return [];
+
   try {
-    const res = await fetch(`${API}/api/shop`);
+    const res = await fetch(
+      `${API}/api/shop?shop_id=${shopId}&initData=${encodeURIComponent(initData())}`
+    );
     if (!res.ok) return [];
     const j = (await res.json()) as { ok?: boolean; products?: ShopProduct[] };
     return j.ok ? (j.products ?? []) : [];
@@ -1225,11 +1454,21 @@ export async function apiReserveProducts(
   status: number;
   data: { ok: boolean; reserved?: number; failed?: { product_id: string; error: string }[] } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/shop-reserve`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), items }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        items,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1253,11 +1492,20 @@ export async function apiMyProducts(): Promise<{
   status: number;
   data: { ok: boolean; items: MyProduct[] } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/my-products`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData() }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1269,11 +1517,21 @@ export async function apiCancelReservation(saleId: string): Promise<{
   status: number;
   data: { ok: boolean; error?: string } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/cancel-reservation`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), sale_id: saleId }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        sale_id: saleId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1293,9 +1551,12 @@ export async function fetchDaySlots(
   serviceId: string,
   date: string,
 ): Promise<DaySlot[]> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) return [];
+
   try {
     const res = await fetch(
-      `${API}/api/day-slots?specialist=${specialistId}&service=${serviceId}&date=${date}`,
+      `${API}/api/day-slots?shop_id=${shopId}&specialist=${specialistId}&service=${serviceId}&date=${date}&initData=${encodeURIComponent(initData())}`
     );
     if (!res.ok) return [];
     const j = (await res.json()) as { ok?: boolean; slots?: DaySlot[] };
@@ -1315,11 +1576,21 @@ export async function apiWaitlistJoin(payload: {
   status: number;
   data: { ok: boolean; id?: string; error?: string; limit?: number } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/waitlist-join`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), ...payload }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        ...payload,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1331,11 +1602,21 @@ export async function apiWaitlistLeave(id: string): Promise<{
   status: number;
   data: { ok: boolean; error?: string } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/waitlist-leave`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData(), id }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+        id,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1362,11 +1643,20 @@ export async function apiMyWaitlist(): Promise<{
   status: number;
   data: { ok: boolean; items: WaitItem[] } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/my-waitlist`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData() }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
@@ -1388,11 +1678,20 @@ export async function apiMyCertificates(): Promise<{
   status: number;
   data: { ok: boolean; items: MyCertificate[] } | null;
 }> {
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/my-certificates`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData() }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId,
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
