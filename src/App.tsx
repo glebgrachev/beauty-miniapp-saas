@@ -2971,17 +2971,20 @@ function ScheduleScreen({
     }
   }
 
-  // занятость внутри заказа (тот же мастер)
   const busy = resolvedSpec
-    ? Object.entries(chosen)
-        .filter(([k, c]) => c.specialist_id === resolvedSpec.id && k !== pos?.key)
-        .map((e) => [Date.parse(e[1].starts_at), Date.parse(e[1].ends_at)] as [number, number])
-    : [];
-  const availSlots = slots.filter((sl) => {
-    const s = Date.parse(sl.slot_start);
-    const e = Date.parse(sl.slot_end);
-    return !busy.some(([bs, be]) => s < be && e > bs);
-  });
+  ? Object.entries(chosen)
+      .filter(([k, c]) => c.specialist_id === resolvedSpec.id && k !== pos?.key)
+      .map((e) => [Date.parse(e[1].starts_at), Date.parse(e[1].ends_at)] as [number, number])
+  : [];
+const availSlots = slots.filter((sl) => {
+  // ✅ Если слот занят в БД — не показываем
+  if (!sl.is_free) return false;
+  
+  // ✅ Если слот занят в корзине — не показываем
+  const s = Date.parse(sl.slot_start);
+  const e = Date.parse(sl.slot_end);
+  return !busy.some(([bs, be]) => s < be && e > bs);
+});
 
   if (N === 0) {
     return (
