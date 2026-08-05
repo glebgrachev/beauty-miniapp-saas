@@ -1546,7 +1546,7 @@ function BookingsScreen({
         <span className={`bk-status s-${b.status}`}>{statusLabel(b.status)}</span>
       </div>
       <div className="bk-sub">{b.specialist}</div>
-      <div className="bk-when" style={{ textTransform: "capitalize" }}>{fullDateTime(b.starts_at)}</div>
+      <div className="bk-when" style={{ textTransform: "capitalize" }}>{formatLocalTime(b.starts_at)}</div>
       {upcoming && (b.can_cancel || b.can_reschedule) && (
         <div className="bk-actions">
           {b.can_reschedule && (
