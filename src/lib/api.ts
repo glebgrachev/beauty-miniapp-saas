@@ -23,7 +23,6 @@ function cached<T>(key: string, ttl: number, loader: () => Promise<T>): Promise<
   });
 }
 
-// сброс кэша каталога (напр. после действий, меняющих данные)
 export function clearCatalogCache() {
   _cache.clear();
 }
@@ -105,19 +104,16 @@ let cachedShopId: string | null = null;
 export async function getCurrentShopId(): Promise<string | null> {
   if (cachedShopId !== null) return cachedShopId;
 
-  // ======== НАЧАЛО ВСТАВКИ ========
   console.log('🔍 window.location:', window.location);
   console.log('🔍 window.location.hash:', window.location.hash);
   console.log('🔍 window.location.search:', window.location.search);
   
-  // 🔥 ДОБАВЛЯЕМ НОВЫЕ ЛОГИ
   const initData = window.Telegram?.WebApp?.initData || '';
   console.log('🔥 initData:', initData);
   
   const params = new URLSearchParams(initData);
   const startParam = params.get('start_param');
   console.log('🔥 startParam из initData:', startParam);
-  // ======== КОНЕЦ ВСТАВКИ ========
   
   // 1. Пробуем получить shop_id из start_param (Telegram WebApp)
   try {
@@ -409,7 +405,6 @@ export async function fetchSlots(
   dateStr: string,
   _busyRanges: { starts_at: string; ends_at: string }[] = [],
 ) {
-  // Используем существующий эндпоинт /api/day-slots в CRM
   const res = await fetch(
     `${API}/api/day-slots?specialist=${specialistId}&service=${serviceId}&date=${dateStr}`
   );
@@ -442,10 +437,7 @@ export async function apiPrice(
 }
 
 export async function apiBook(serviceId: string, specialistId: string, startsAt: string, points = 0, cert = 0, certId: string | null = null) {
-  // ✅ ПОЛУЧАЕМ shop_id (ЭТО НОВАЯ СТРОКА)
   const shopId = await getCurrentShopId();
-
-  // ✅ ПРОВЕРЯЕМ shop_id (ЭТО НОВАЯ СТРОКА)
   if (!shopId) {
     console.error('❌ Не удалось определить shop_id');
     return { status: 400, data: null };
@@ -457,7 +449,7 @@ export async function apiBook(serviceId: string, specialistId: string, startsAt:
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         initData: initData(),
-        shop_id: shopId, // ← ЭТО НОВАЯ СТРОКА
+        shop_id: shopId,
         service_id: serviceId,
         specialist_id: specialistId,
         starts_at: startsAt,
@@ -832,10 +824,7 @@ export async function apiBookCart(
   status: number;
   data: { ok: boolean; order_id?: string; busy?: number[]; error?: string } | null;
 }> {
-  // ✅ ПОЛУЧАЕМ shop_id (ЭТО НОВАЯ СТРОКА)
   const shopId = await getCurrentShopId();
-
-  // ✅ ПРОВЕРЯЕМ shop_id (ЭТО НОВАЯ СТРОКА)
   if (!shopId) {
     console.error('❌ Не удалось определить shop_id');
     return { status: 400, data: null };
@@ -847,7 +836,7 @@ export async function apiBookCart(
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         initData: initData(),
-        shop_id: shopId, // ← ЭТО НОВАЯ СТРОКА
+        shop_id: shopId,
         items,
         points,
         cert,
@@ -858,6 +847,50 @@ export async function apiBookCart(
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
     return { status: 0, data: null };
+  }
+}
+
+/* ---------- ЛОЯЛЬНОСТЬ (через CRM) ---------- */
+export type LoyaltyTx = {
+  kind: "accrual" | "redemption" | "adjustment";
+  points: number;
+  note: string | null;
+  created_at: string;
+};
+
+export type LoyaltyData = {
+  ok: boolean;
+  balance: number;
+  total_earned: number;
+  total_spent: number;
+  cashback_percent: number;
+  redeem_max_percent: number;
+  point_value: number;
+  transactions: LoyaltyTx[];
+};
+
+export async function checkBonusAccess(): Promise<{
+  canUse: boolean;
+  message: string;
+}> {
+  try {
+    const shopId = await getCurrentShopId();
+    if (!shopId) {
+      return { canUse: false, message: "Салон не найден" };
+    }
+    
+    const res = await fetch(`${API}/api/loyalty?initData=${encodeURIComponent(initData())}`);
+    if (!res.ok) {
+      return { canUse: false, message: "Не удалось проверить доступ" };
+    }
+    const result = await res.json();
+    if (!result.ok) {
+      return { canUse: false, message: "Бонусы недоступны" };
+    }
+    
+    return { canUse: true, message: "Бонусы доступны" };
+  } catch {
+    return { canUse: false, message: "Произошла ошибка" };
   }
 }
 
