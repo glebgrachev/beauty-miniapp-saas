@@ -719,11 +719,21 @@ export async function apiMyBookings(): Promise<{
   status: number;
   data: { ok: boolean; upcoming: MyBooking[]; past: MyBooking[]; active_reschedule: ActiveReschedule | null } | null;
 }> {
+  // ✅ ПОЛУЧАЕМ shop_id
+  const shopId = await getCurrentShopId();
+  if (!shopId) {
+    console.error('❌ Не удалось определить shop_id');
+    return { status: 400, data: null };
+  }
+
   try {
     const res = await fetch(`${API}/api/my-bookings`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ initData: initData() }),
+      body: JSON.stringify({
+        initData: initData(),
+        shop_id: shopId, // ← ДОБАВЛЯЕМ
+      }),
     });
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
