@@ -398,30 +398,27 @@ export async function fetchBookingContext(serviceId: string, specialistId: strin
 const API = import.meta.env.VITE_API_URL as string;
 const initData = () => window.Telegram?.WebApp?.initData ?? "";
 
-/* ---------- СЛОТЫ (через CRM) ---------- */
 export async function fetchSlots(
   specialistId: string,
   serviceId: string,
   dateStr: string,
-  _busyRanges: { starts_at: string; ends_at: string }[] = [],
+  busyRanges: { starts_at: string; ends_at: string }[] = [],
 ) {
   const shopId = await getCurrentShopId();
   if (!shopId) return [];
 
-  const res = await fetch(
-    `${API}/api/day-slots?shop_id=${shopId}&specialist=${specialistId}&service=${serviceId}&date=${dateStr}&initData=${encodeURIComponent(initData())}`
-  );
+  // Формируем URL с busyRanges
+  let url = `${API}/api/day-slots?shop_id=${shopId}&specialist=${specialistId}&service=${serviceId}&date=${dateStr}&initData=${encodeURIComponent(initData())}`;
+  
+  if (busyRanges.length > 0) {
+    url += `&busyRanges=${encodeURIComponent(JSON.stringify(busyRanges))}`;
+  }
+
+  const res = await fetch(url);
   if (!res.ok) return [];
   const result = await res.json();
   return result.ok ? result.slots : [];
 }
-
-export type PriceResult = {
-  full_price: number;
-  discount_amount: number;
-  final_price: number;
-  promo_title: string | null;
-};
 
 export async function apiPrice(
   serviceId: string,
