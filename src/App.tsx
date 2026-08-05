@@ -1549,8 +1549,15 @@ function BookingsScreen({
       </div>
       <div className="bk-sub">{b.specialist}</div>
       <div className="bk-when" style={{ textTransform: "capitalize" }}>
-  {b.starts_at.replace(/T/, ' ').slice(0, 16)}
-</div>
+        {new Date(b.starts_at).toLocaleString("ru-RU", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "UTC"
+        })}
+      </div>
       {upcoming && (b.can_cancel || b.can_reschedule) && (
         <div className="bk-actions">
           {b.can_reschedule && (
