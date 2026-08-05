@@ -505,29 +505,6 @@ export async function apiConfirm(bookingId: string) {
   }
 }
 
-export async function apiConfirm(bookingId: string) {
-  const shopId = await getCurrentShopId();
-  if (!shopId) {
-    console.error('❌ Не удалось определить shop_id');
-    return { status: 400, data: null };
-  }
-
-  try {
-    const res = await fetch(`${API}/api/confirm`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        initData: initData(),
-        shop_id: shopId,
-        booking_id: bookingId,
-      }),
-    });
-    return { status: res.status, data: await res.json().catch(() => null) };
-  } catch {
-    return { status: 0, data: null };
-  }
-}
-
 /* ---------- ЭКРАН МАСТЕРА (прямой запрос в Supabase) ---------- */
 export type SpecialistFull = {
   id: string;
