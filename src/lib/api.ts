@@ -81,9 +81,19 @@ let cachedShopId: string | null = null;
 export async function getCurrentShopId(): Promise<string | null> {
   if (cachedShopId !== null) return cachedShopId;
 
+  // ======== НАЧАЛО ВСТАВКИ ========
   console.log('🔍 window.location:', window.location);
   console.log('🔍 window.location.hash:', window.location.hash);
   console.log('🔍 window.location.search:', window.location.search);
+  
+  // 🔥 ДОБАВЛЯЕМ НОВЫЕ ЛОГИ
+  const initData = window.Telegram?.WebApp?.initData || '';
+  console.log('🔥 initData:', initData);
+  
+  const params = new URLSearchParams(initData);
+  const startParam = params.get('start_param');
+  console.log('🔥 startParam из initData:', startParam);
+  // ======== КОНЕЦ ВСТАВКИ ========
   
   // 1. Пробуем получить shop_id из start_param (Telegram WebApp)
   try {
