@@ -149,45 +149,48 @@ export async function getCurrentShopId(): Promise<string | null> {
 
   // 4. Пробуем получить shop_id из БД (для старых пользователей)
   try {
-    console.log('🔍 ШАГ 4: Начинаем поиск в БД');
+  console.log('🔍 ШАГ 4: Начинаем поиск в БД');
+  
+  const initData = window.Telegram?.WebApp?.initData || "";
+  console.log('🔍 ШАГ 4: initData:', initData);
+  
+  const params = new URLSearchParams(initData);
+  const userJson = params.get("user");
+  console.log('🔍 ШАГ 4: userJson:', userJson);
+  
+  if (userJson) {
+    const user = JSON.parse(decodeURIComponent(userJson));
+    const telegramId = user.id;
+    console.log('🔍 ШАГ 4: telegramId:', telegramId);
+    console.log('🔍 ШАГ 4: ТИП telegramId:', typeof telegramId, 'ЗНАЧЕНИЕ:', telegramId);
     
-    const initData = window.Telegram?.WebApp?.initData || "";
-    console.log('🔍 ШАГ 4: initData:', initData);
-    
-    const params = new URLSearchParams(initData);
-    const userJson = params.get("user");
-    console.log('🔍 ШАГ 4: userJson:', userJson);
-    
-    if (userJson) {
-      const user = JSON.parse(decodeURIComponent(userJson));
-      const telegramId = user.id;
-      console.log('🔍 ШАГ 4: telegramId:', telegramId);
+    if (telegramId) {
+      console.log(`🔍 ШАГ 4: Ищем пользователя с telegram_id = ${telegramId} (тип: ${typeof telegramId})`);
+      const { data, error } = await supabase
+        .from("users")
+        .select("shop_id")
+        .eq("telegram_id", telegramId)
+        .maybeSingle();
       
-      if (telegramId) {
-        console.log('🔍 ШАГ 4: Выполняем запрос к Supabase...');
-        const { data, error } = await supabase
-          .from("users")
-          .select("shop_id")
-          .eq("telegram_id", telegramId)
-          .maybeSingle();
+      console.log('🔍 ШАГ 4: Результат запроса:', { data, error });
         
-        console.log('🔍 ШАГ 4: Результат запроса:', { data, error });
-          
-        if (!error && data?.shop_id) {
-          cachedShopId = data.shop_id?.toString() || null;
-          console.log('✅ shop_id из users:', cachedShopId);
-          return cachedShopId;
-        } else {
-          console.log('⚠️ Пользователь не найден или shop_id = null');
-          if (error) console.error('❌ Ошибка:', error);
-        }
+      if (!error && data?.shop_id) {
+        cachedShopId = data.shop_id?.toString() || null;
+        console.log('✅ shop_id из users:', cachedShopId);
+        return cachedShopId;
+      } else {
+        console.log('⚠️ Пользователь не найден или shop_id = null');
+        if (error) console.error('❌ Ошибка:', error);
       }
     } else {
-      console.log('⚠️ ШАГ 4: userJson отсутствует');
+      console.log('⚠️ ШАГ 4: telegramId отсутствует или пустой');
     }
-  } catch (e) {
-    console.error('❌ Ошибка в шаге 4:', e);
+  } else {
+    console.log('⚠️ ШАГ 4: userJson отсутствует');
   }
+} catch (e) {
+  console.error('❌ Ошибка в шаге 4:', e);
+}
   
   console.log('⚠️ shop_id не найден');
   return null;
