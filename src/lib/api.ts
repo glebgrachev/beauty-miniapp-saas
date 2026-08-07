@@ -111,45 +111,43 @@ export async function getCurrentShopId(): Promise<string | null> {
   const initData = window.Telegram?.WebApp?.initData || '';
   console.log('🔥 initData:', initData);
   
-  const params = new URLSearchParams(initData);
-  const startParam = params.get('start_param');
-  console.log('🔥 startParam из initData:', startParam);
-  
-  // 1. Пробуем получить shop_id из start_param (Telegram WebApp)
+  // 1. Пробуем получить shop_id из initData (для бота)
+  let shopId: string | null = null;
   try {
-    const initData = window.Telegram?.WebApp?.initData || "";
     const params = new URLSearchParams(initData);
     const startParam = params.get('start_param');
+    console.log('🔥 startParam из initData:', startParam);
     if (startParam && startParam.startsWith('shop_')) {
-      const shopId = startParam.replace('shop_', '');
-      cachedShopId = shopId;
-      console.log('🔍 shop_id из start_param:', shopId);
-      await ensureUserExists(shopId);
-      return shopId;
+      shopId = startParam.replace('shop_', '');
+      console.log('🔍 shop_id из start_param (initData):', shopId);
     }
   } catch (e) {
     // Игнорируем ошибки
   }
-  
-  // 2. Пробуем получить shop_id из хэша (старый способ)
-  try {
-    const hash = window.location.hash;
-    if (hash) {
-      const params = new URLSearchParams(hash.split('?')[1] || '');
-      const startParam = params.get('start');
+
+  // 2. Если не нашли — пробуем из URL (для прямой ссылки)
+  if (!shopId) {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const startParam = urlParams.get('startapp') || urlParams.get('tgWebAppStartParam');
+      console.log('🔥 startapp из URL:', startParam);
       if (startParam && startParam.startsWith('shop_')) {
-        const shopId = startParam.replace('shop_', '');
-        cachedShopId = shopId;
-        console.log('🔍 shop_id из хэша URL:', shopId);
-        await ensureUserExists(shopId);
-        return shopId;
+        shopId = startParam.replace('shop_', '');
+        console.log('🔍 shop_id из URL:', shopId);
       }
+    } catch (e) {
+      // Игнорируем ошибки
     }
-  } catch (e) {
-    // Игнорируем ошибки
   }
-  
-  // 3. Пробуем получить shop_id из БД (для старых пользователей)
+
+  // 3. Если нашли shop_id — сохраняем и создаём пользователя
+  if (shopId) {
+    cachedShopId = shopId;
+    await ensureUserExists(shopId);
+    return shopId;
+  }
+
+  // 4. Пробуем получить shop_id из БД (для старых пользователей)
   try {
     const initData = window.Telegram?.WebApp?.initData || "";
     const params = new URLSearchParams(initData);
