@@ -193,6 +193,8 @@ export async function getCurrentShopId(): Promise<string | null> {
 }
   
   console.log('⚠️ shop_id не найден');
+  console.log('📋 Состояние cachedShopId:', cachedShopId);
+  console.log('📋 initData:', window.Telegram?.WebApp?.initData);
   return null;
 }
 
