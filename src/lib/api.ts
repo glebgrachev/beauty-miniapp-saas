@@ -435,7 +435,24 @@ export async function fetchSlots(
   const res = await fetch(url);
   if (!res.ok) return [];
   const result = await res.json();
-  return result.ok ? result.slots : [];
+  const slots = result.ok ? result.slots : [];
+  
+  // ===== ФИЛЬТРУЕМ ПРОШЕДШИЕ СЛОТЫ =====
+  const now = new Date();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const selectedDate = new Date(dateStr);
+  const isToday = selectedDate.toDateString() === today.toDateString();
+  
+  if (isToday) {
+    return slots.filter((slot: any) => {
+      const slotTime = new Date(slot.slot_start);
+      return slotTime > now;
+    });
+  }
+  
+  return slots;
 }
 
 export type PriceResult = {
