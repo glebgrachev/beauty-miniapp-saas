@@ -1025,7 +1025,7 @@ export async function apiBookCart(
         if (window.Telegram?.WebApp) {
           alert('🔒 Функционал приложения временно ограничен.\n\nПожалуйста, обратитесь к администратору салона.');
         }
-        return { status: 403, data: { error: 'User is frozen' } };
+        return { status: 403, data: { ok: false, error: 'User is frozen' } };
       }
     }
   } catch (e) {
