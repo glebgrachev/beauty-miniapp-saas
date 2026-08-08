@@ -69,10 +69,7 @@ async function ensureUserExists(shopId: string) {
       if (existing.frozen === true) {
     console.warn('⚠️ Пользователь заморожен (frozen=true)');
     if (window.Telegram?.WebApp) {
-      window.Telegram.WebApp.showPopup({
-        message: '🔒 Функционал приложения временно ограничен.\n\nПожалуйста, обратитесь к администратору салона.',
-        buttons: [{ type: 'ok' }]
-      });
+      alert('🔒 Функционал приложения временно ограничен.\n\nПожалуйста, обратитесь к администратору салона.');
     }
         // Прерываем выполнение
         throw new Error('User is frozen');
@@ -531,10 +528,7 @@ export async function apiBook(serviceId: string, specialistId: string, startsAt:
       if (!userError && userData?.frozen === true) {
         console.warn('⚠️ Попытка записи замороженным пользователем');
         if (window.Telegram?.WebApp) {
-          window.Telegram.WebApp.showPopup({
-            message: '🔒 Запись временно недоступна.\n\nПожалуйста, обратитесь к администратору салона.',
-            buttons: [{ type: 'ok' }]
-          });
+          alert('🔒 Функционал приложения временно ограничен.\n\nПожалуйста, обратитесь к администратору салона.');
         }
         return { status: 403, data: { error: 'User is frozen' } };
       }
@@ -1029,10 +1023,7 @@ export async function apiBookCart(
       if (!userError && userData?.frozen === true) {
         console.warn('⚠️ Попытка оформления заказа замороженным пользователем');
         if (window.Telegram?.WebApp) {
-          window.Telegram.WebApp.showPopup({
-  message: '🔒 Оформление заказа временно недоступно.\n\nПожалуйста, обратитесь к администратору салона.',
-  buttons: [{ type: 'ok' }]
-});
+          alert('🔒 Функционал приложения временно ограничен.\n\nПожалуйста, обратитесь к администратору салона.');
         }
         return { status: 403, data: { error: 'User is frozen' } };
       }
