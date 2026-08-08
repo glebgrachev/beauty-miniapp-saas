@@ -1053,9 +1053,11 @@ function BookingScreen({
       setErr("Этот слот только что заняли. Выберите другое время.");
       fetchDaySlots(specialistId, serviceId, date).then(setSlots);
       setSlot(null);
-    } else {
-      setErr(r.data?.error ? `Ошибка: ${r.data.error}` : "Не удалось записаться. Попробуйте ещё раз.");
-    }
+    } else if (r.status === 403 && r.data?.error === 'frozen') {
+  setErr('🔒 Функционал приложения временно ограничен. Пожалуйста, обратитесь к администратору салона.');
+} else {
+  setErr(r.data?.error ? `Ошибка: ${r.data.error}` : "Не удалось записаться. Попробуйте ещё раз.");
+}
   }
 
   if (result) {
@@ -2974,11 +2976,13 @@ function ScheduleScreen({
       setDate(days[0].dateStr);
       setIdx(first);
       setOrderErr("Эти слоты только что заняли — выберите другое время для отмеченных услуг.");
-    } else if (r.status === 401) {
-      setOrderErr("Оформление доступно только из Telegram.");
-    } else {
-      setOrderErr("Не удалось оформить заказ. Попробуйте ещё раз.");
-    }
+    } else if (r.status === 403 && r.data?.error === 'frozen') {
+  setOrderErr('🔒 Функционал приложения временно ограничен. Пожалуйста, обратитесь к администратору салона.');
+} else if (r.status === 401) {
+  setOrderErr("Оформление доступно только из Telegram.");
+} else {
+  setOrderErr("Не удалось оформить заказ. Попробуйте ещё раз.");
+}
   }
 
   // занятость внутри заказа (тот же мастер) + занятые слоты из БД
