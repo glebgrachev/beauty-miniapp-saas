@@ -1,3 +1,4 @@
+// lib/supabase/api.ts — ЧАСТЬ 1 (строки 1-700)
 import { supabase } from "./supabase";
 import type {
   Category,
@@ -55,7 +56,7 @@ async function ensureUserExists(shopId: string) {
     console.log('🔥 Checking if user exists in Supabase...');
     const { data: existing, error: selectError } = await supabase
       .from("users")
-      .select("telegram_id")
+      .select("telegram_id, frozen")
       .eq("telegram_id", telegramId)
       .maybeSingle();
     
@@ -64,6 +65,18 @@ async function ensureUserExists(shopId: string) {
     }
     
     if (existing) {
+      // ===== 🔥 ПРОВЕРКА НА ЗАМОРОЗКУ =====
+      if (existing.frozen === true) {
+        console.warn('⚠️ Пользователь заморожен (frozen=true)');
+        if (window.Telegram?.WebApp) {
+          window.Telegram.WebApp.showAlert(
+            '🔒 Функционал приложения временно ограничен.\n\nПожалуйста, обратитесь к администратору салона.'
+          );
+        }
+        // Прерываем выполнение
+        throw new Error('User is frozen');
+      }
+      
       console.log('✅ Пользователь найден, обновляем shop_id...');
       const { error: updateError } = await supabase
         .from("users")
@@ -85,6 +98,7 @@ async function ensureUserExists(shopId: string) {
           last_name: lastName,
           username: username,
           shop_id: Number(shopId),
+          frozen: false,
         });
       
       if (insertError) {
@@ -415,6 +429,7 @@ export async function fetchBookingContext(serviceId: string, specialistId: strin
 /* ---------- API для работы с CRM (слоты, бронирование) ---------- */
 const API = import.meta.env.VITE_API_URL as string;
 const initData = () => window.Telegram?.WebApp?.initData ?? "";
+// lib/supabase/api.ts — ЧАСТЬ 2 (строки 701-конец)
 
 export async function fetchSlots(
   specialistId: string,
@@ -494,6 +509,36 @@ export async function apiBook(serviceId: string, specialistId: string, startsAt:
   if (!shopId) {
     console.error('❌ Не удалось определить shop_id');
     return { status: 400, data: null };
+  }
+
+  // ===== 🔥 ПРОВЕРКА НА ЗАМОРОЗКУ =====
+  try {
+    const initData = window.Telegram?.WebApp?.initData || "";
+    const params = new URLSearchParams(initData);
+    const userJson = params.get("user");
+    
+    if (userJson) {
+      const user = JSON.parse(decodeURIComponent(userJson));
+      const telegramId = user.id;
+      
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("frozen")
+        .eq("telegram_id", telegramId)
+        .maybeSingle();
+      
+      if (!userError && userData?.frozen === true) {
+        console.warn('⚠️ Попытка записи замороженным пользователем');
+        if (window.Telegram?.WebApp) {
+          window.Telegram.WebApp.showAlert(
+            '🔒 Запись временно недоступна.\n\nПожалуйста, обратитесь к администратору салона.'
+          );
+        }
+        return { status: 403, data: { error: 'User is frozen' } };
+      }
+    }
+  } catch (e) {
+    console.error('❌ Ошибка проверки frozen:', e);
   }
 
   try {
@@ -961,6 +1006,36 @@ export async function apiBookCart(
   if (!shopId) {
     console.error('❌ Не удалось определить shop_id');
     return { status: 400, data: null };
+  }
+
+  // ===== 🔥 ПРОВЕРКА НА ЗАМОРОЗКУ =====
+  try {
+    const initData = window.Telegram?.WebApp?.initData || "";
+    const params = new URLSearchParams(initData);
+    const userJson = params.get("user");
+    
+    if (userJson) {
+      const user = JSON.parse(decodeURIComponent(userJson));
+      const telegramId = user.id;
+      
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("frozen")
+        .eq("telegram_id", telegramId)
+        .maybeSingle();
+      
+      if (!userError && userData?.frozen === true) {
+        console.warn('⚠️ Попытка оформления заказа замороженным пользователем');
+        if (window.Telegram?.WebApp) {
+          window.Telegram.WebApp.showAlert(
+            '🔒 Оформление заказа временно недоступно.\n\nПожалуйста, обратитесь к администратору салона.'
+          );
+        }
+        return { status: 403, data: { error: 'User is frozen' } };
+      }
+    }
+  } catch (e) {
+    console.error('❌ Ошибка проверки frozen:', e);
   }
 
   try {
