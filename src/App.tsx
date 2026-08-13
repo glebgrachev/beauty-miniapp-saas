@@ -1066,7 +1066,16 @@ function BookingScreen({
         <div className="ico">✓</div>
         <h2>Вы записаны!</h2>
         <p>{ctx?.service?.name} · {ctx?.master?.full_name}</p>
-        <p style={{ textTransform: "capitalize" }}>{fullDateTime(result.startsAt)}</p>
+        <p style={{ textTransform: "capitalize" }}>
+        {new Date(result.startsAt).toLocaleString("ru-RU", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "UTC"
+        })}
+        </p>
         <p>К оплате: <b>{fmtRub(result.final)}</b></p>
         <div style={{ maxWidth: 280, margin: "24px auto 0" }}>
           <button className="btn btn-primary" onClick={onHome}>На главную</button>
