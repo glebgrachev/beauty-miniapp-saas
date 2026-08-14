@@ -420,7 +420,7 @@ function TabBar({
     { key: "home" as const, label: "Главная", icon: IconHome, emoji: "🏠" },
     { key: "bookings" as const, label: "Записи", icon: IconCalendar, emoji: "🗓" },
     { key: "cart" as const, label: "Корзина", icon: IconBag, emoji: "🛒" },
-    { key: "profile" as const, label: "Профиль", icon: IconUser, emoji: "👤" },
+    { key: "profile" as const, label: "Профиль", icon: IconUser, emoji: "👨‍💼" },
   ];
   return (
     <nav className="tabbar">
