@@ -815,3 +815,5 @@ function ServiceScreen({
         </button>
       </div>
       <div className="detail-meta">
+        <span>⏱ {fmtDuration(service.duration_min)}</span>
+        <span>💰 {priceLabel}</
