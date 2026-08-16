@@ -86,6 +86,15 @@ export default function App() {
     const xid = params.get("cancel");
     const uid = params.get("unsub");
     const wl = params.get("wl");
+    const startapp = params.get("startapp"); // 👈 Добавляем
+    
+    // ✅ Обработка startapp (новый способ, должен быть первым)
+    if (startapp?.startsWith("confirm_")) {
+      const bookingId = startapp.replace("confirm_", "");
+      if (bookingId) return [{ name: "home" }, { name: "confirm", bookingId }];
+    }
+    
+    // Старые способы (для обратной совместимости)
     if (wl) return [{ name: "home" }, { name: "my-waitlist" }];
     if (cid) return [{ name: "home" }, { name: "confirm", bookingId: cid }];
     if (rid) return [{ name: "home" }, { name: "review", bookingId: rid }];
