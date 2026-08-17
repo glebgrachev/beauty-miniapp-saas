@@ -459,8 +459,7 @@ export async function fetchSlots(
   const isToday = selectedDate.toDateString() === today.toDateString();
 
   if (isToday) {
-    const moscowOffset = 3; // UTC+3
-  
+      
     return slots.filter((slot: any) => {
       const slotMoscow = new Date(slot.slot_start + '+03:00');
       return slotMoscow > now; // ✅ ИСПРАВЛЕНО
