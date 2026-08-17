@@ -968,6 +968,13 @@ function BookingScreen({
     fetchDaySlots(specialistId, serviceId, date).then((s) => {
       setSlots(s);
       setSlotsLoading(false);
+
+      console.log('🔍 Слоты из API:', s.map(slot => ({
+        start: slot.slot_start,
+        end: slot.slot_end,
+        is_free: slot.is_free
+      })));
+
       if (presetSlot && s.some((x) => x.slot_start === presetSlot && x.is_free)) {
         setSlot(presetSlot);
       }
