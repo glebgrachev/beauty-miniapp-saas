@@ -1,5 +1,5 @@
 // lib/supabase/api.ts — ЧАСТЬ 1 (строки 1-700)
-import { supabase } from "./supabase";
+import { supabase, createAdmin } from "./supabase";
 import type {
   Category,
   Promo,
@@ -178,7 +178,9 @@ export async function getCurrentShopId(): Promise<string | null> {
     
     if (telegramId) {
       console.log(`🔍 ШАГ 4: Ищем пользователя с telegram_id = ${telegramId} (тип: ${typeof telegramId})`);
-      const { data, error } = await supabase
+      // ✅ Используем admin (service_role) для обхода RLS
+      const admin = createAdmin();
+      const { data, error } = await admin
         .from("users")
         .select("shop_id")
         .eq("telegram_id", telegramId)
