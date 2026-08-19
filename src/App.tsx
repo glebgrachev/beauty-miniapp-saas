@@ -593,22 +593,23 @@ function Home({ onNavigate }: { onNavigate: (s: Screen) => void }) {
     );
 
     // 🔥 Проверяем модуль stock у салона
-getCurrentShopId().then((shopId) => {
-  if (shopId) {
-    supabase
-      .from("shops")
-      .select("modules")
-      .eq("id", shopId)
-      .single()
-      .then(({ data }: { data: { modules: Record<string, any> } | null }) => {
-        const has = hasModule(data?.modules, "stock");
-        setHasStock(has);
-        setStockLoading(false);
-      });
-  } else {
-    setStockLoading(false);
-  }
-});
+  getCurrentShopId().then((shopId) => {
+    if (shopId) {
+      supabase
+        .from("shops")
+        .select("modules")
+        .eq("id", shopId)
+        .single()
+        .then(({ data }: { data: { modules: Record<string, any> } | null }) => {
+          const has = hasModule(data?.modules, "stock");
+          setHasStock(has);
+          setStockLoading(false);
+        });
+    } else {
+      setStockLoading(false);
+    }
+  });
+}, []);
 
   const name = tg?.initDataUnsafe?.user?.first_name ?? "гость";
   const query = q.trim().toLowerCase();
