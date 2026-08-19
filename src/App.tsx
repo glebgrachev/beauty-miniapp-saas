@@ -59,9 +59,7 @@ import MasterLinkScreen from "./MasterLinkScreen";
 import ShopScreen, { MyProductsScreen, MyCertificatesScreen } from "./ShopScreen";
 import { cacheGet, cacheSet, cacheDrop, cacheDropPrefix } from "./lib/cache";
 
-import { getCurrentShopId } from "./lib/api";
 import { getCurrentShopId, fetchShopModules } from "./lib/api";
-import { supabase } from "./lib/supabase";
 import { hasModule } from "./lib/modules";
 
 import type {
