@@ -60,7 +60,7 @@ import ShopScreen, { MyProductsScreen, MyCertificatesScreen } from "./ShopScreen
 import { cacheGet, cacheSet, cacheDrop, cacheDropPrefix } from "./lib/cache";
 
 import { getCurrentShopId } from "./lib/api";
-import { supabase } from "./lib/supabase/client";
+import { supabase } from "./lib/supabase";
 
 import type {
   Category,
@@ -592,22 +592,22 @@ function Home({ onNavigate }: { onNavigate: (s: Screen) => void }) {
     );
 
     // 🔥 Проверяем модуль stock у салона
-    getCurrentShopId().then((shopId) => {
-      if (shopId) {
-        supabase
-          .from("shops")
-          .select("modules")
-          .eq("id", shopId)
-          .single()
-          .then(({ data }) => {
-            const stockValue = data?.modules?.stock;
-            setHasStock(stockValue !== undefined && stockValue !== null && stockValue !== false);
-            setStockLoading(false);
-          });
-      } else {
-        setStockLoading(false);
-      }
-    });
+  getCurrentShopId().then((shopId) => {
+    if (shopId) {
+      supabase
+        .from("shops")
+        .select("modules")
+        .eq("id", shopId)
+        .single()
+        .then(({ data }: { data: { modules: Record<string, any> } | null }) => {
+          const stockValue = data?.modules?.stock;
+          setHasStock(stockValue !== undefined && stockValue !== null && stockValue !== false);
+          setStockLoading(false);
+        });
+    } else {
+      setStockLoading(false);
+    }
+  });
   }, []);
 
   const name = tg?.initDataUnsafe?.user?.first_name ?? "гость";
