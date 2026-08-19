@@ -602,6 +602,7 @@ Promise.resolve(getCurrentShopId()).then((shopId) => {
       const has = hasModule(modules, "stock");
       console.log('🔍 hasStock:', has);
       setHasStock(has);
+      onHasStockChange?.(has); // 🔥 Добавляем эту строку
       setStockLoading(false);
     }).catch((err: any) => {
       console.error('❌ Ошибка запроса модулей:', err);
@@ -2309,6 +2310,7 @@ function CartScreen({
   onShop,
   onCheckout,
   onReserveOnly,
+  hasStock, // 🔥 Добавляем
 }: {
   cart: CartItem[];
   products: CartProduct[];
@@ -2318,6 +2320,7 @@ function CartScreen({
   onShop: () => void;
   onCheckout: (positions: CheckoutPosition[]) => void;
   onReserveOnly: () => void;
+  hasStock?: boolean; // 🔥 Добавляем
 }) {
   const [price, setPrice] = useState<CartPrice | null>(null);
   const [reserving, setReserving] = useState(false);
