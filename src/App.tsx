@@ -58,7 +58,6 @@ import MasterCabinet from "./MasterCabinet";
 import MasterLinkScreen from "./MasterLinkScreen";
 import ShopScreen, { MyProductsScreen, MyCertificatesScreen } from "./ShopScreen";
 import { cacheGet, cacheSet, cacheDrop, cacheDropPrefix } from "./lib/cache";
-import { useStockModule } from "@/hooks/useStockModule";
 import type {
   Category,
   Promo,
@@ -575,7 +574,8 @@ function Home({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const [specialists, setSpecialists] = useState<SpecialistCard[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
-  const { hasStock, loading: stockLoading } = useStockModule();
+  const [hasStock, setHasStock] = useState(false);
+  const [stockLoading, setStockLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([fetchCategories(), fetchPromos(), fetchSpecialists()]).then(
