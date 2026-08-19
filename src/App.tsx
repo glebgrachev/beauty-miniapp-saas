@@ -2528,6 +2528,11 @@ function CartScreen({
             >
               {reserving ? "Откладываем…" : `Отложить · ${fmtRub(productsTotal)}`}
             </button>
+            {hasStock && (
+              <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={onShop}>
+                В магазин
+              </button>
+            )}
             <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={onAdd}>
               Записаться на услугу
             </button>
