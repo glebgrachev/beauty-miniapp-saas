@@ -1,4 +1,4 @@
-// lib/supabase/api.ts — ЧАСТЬ 1 (строки 1-700)
+// src/lib/api.ts
 import { supabase, createAdmin } from "./supabase";
 import type {
   Category,
@@ -65,13 +65,11 @@ async function ensureUserExists(shopId: string) {
     }
     
     if (existing) {
-      // ===== 🔥 ПРОВЕРКА НА ЗАМОРОЗКУ =====
       if (existing.frozen === true) {
-    console.warn('⚠️ Пользователь заморожен (frozen=true)');
-    if (window.Telegram?.WebApp) {
-      alert('🔒 Функционал приложения временно ограничен.\n\nПожалуйста, обратитесь к администратору салона.');
-    }
-        // Прерываем выполнение
+        console.warn('⚠️ Пользователь заморожен (frozen=true)');
+        if (window.Telegram?.WebApp) {
+          alert('🔒 Функционал приложения временно ограничен.\n\nПожалуйста, обратитесь к администратору салона.');
+        }
         throw new Error('User is frozen');
       }
       
@@ -161,50 +159,49 @@ export async function getCurrentShopId(): Promise<string | null> {
 
   // 4. Пробуем получить shop_id из БД (для старых пользователей)
   try {
-  console.log('🔍 ШАГ 4: Начинаем поиск в БД');
-  
-  const initData = window.Telegram?.WebApp?.initData || "";
-  console.log('🔍 ШАГ 4: initData:', initData);
-  
-  const params = new URLSearchParams(initData);
-  const userJson = params.get("user");
-  console.log('🔍 ШАГ 4: userJson:', userJson);
-  
-  if (userJson) {
-    const user = JSON.parse(decodeURIComponent(userJson));
-    const telegramId = user.id;
-    console.log('🔍 ШАГ 4: telegramId:', telegramId);
-    console.log('🔍 ШАГ 4: ТИП telegramId:', typeof telegramId, 'ЗНАЧЕНИЕ:', telegramId);
+    console.log('🔍 ШАГ 4: Начинаем поиск в БД');
     
-    if (telegramId) {
-      console.log(`🔍 ШАГ 4: Ищем пользователя с telegram_id = ${telegramId} (тип: ${typeof telegramId})`);
-      // ✅ Используем admin (service_role) для обхода RLS
-      const admin = createAdmin();
-      const { data, error } = await admin
-        .from("users")
-        .select("shop_id")
-        .eq("telegram_id", telegramId)
-        .maybeSingle();
+    const initData = window.Telegram?.WebApp?.initData || "";
+    console.log('🔍 ШАГ 4: initData:', initData);
+    
+    const params = new URLSearchParams(initData);
+    const userJson = params.get("user");
+    console.log('🔍 ШАГ 4: userJson:', userJson);
+    
+    if (userJson) {
+      const user = JSON.parse(decodeURIComponent(userJson));
+      const telegramId = user.id;
+      console.log('🔍 ШАГ 4: telegramId:', telegramId);
+      console.log('🔍 ШАГ 4: ТИП telegramId:', typeof telegramId, 'ЗНАЧЕНИЕ:', telegramId);
       
-      console.log('🔍 ШАГ 4: Результат запроса:', { data, error });
+      if (telegramId) {
+        console.log(`🔍 ШАГ 4: Ищем пользователя с telegram_id = ${telegramId} (тип: ${typeof telegramId})`);
+        const admin = createAdmin();
+        const { data, error } = await admin
+          .from("users")
+          .select("shop_id")
+          .eq("telegram_id", telegramId)
+          .maybeSingle();
         
-      if (!error && data?.shop_id) {
-        cachedShopId = data.shop_id?.toString() || null;
-        console.log('✅ shop_id из users:', cachedShopId);
-        return cachedShopId;
+        console.log('🔍 ШАГ 4: Результат запроса:', { data, error });
+          
+        if (!error && data?.shop_id) {
+          cachedShopId = data.shop_id?.toString() || null;
+          console.log('✅ shop_id из users:', cachedShopId);
+          return cachedShopId;
+        } else {
+          console.log('⚠️ Пользователь не найден или shop_id = null');
+          if (error) console.error('❌ Ошибка:', error);
+        }
       } else {
-        console.log('⚠️ Пользователь не найден или shop_id = null');
-        if (error) console.error('❌ Ошибка:', error);
+        console.log('⚠️ ШАГ 4: telegramId отсутствует или пустой');
       }
     } else {
-      console.log('⚠️ ШАГ 4: telegramId отсутствует или пустой');
+      console.log('⚠️ ШАГ 4: userJson отсутствует');
     }
-  } else {
-    console.log('⚠️ ШАГ 4: userJson отсутствует');
+  } catch (e) {
+    console.error('❌ Ошибка в шаге 4:', e);
   }
-} catch (e) {
-  console.error('❌ Ошибка в шаге 4:', e);
-}
   
   console.log('⚠️ shop_id не найден');
   console.log('📋 Состояние cachedShopId:', cachedShopId);
@@ -429,7 +426,6 @@ export async function fetchBookingContext(serviceId: string, specialistId: strin
 /* ---------- API для работы с CRM (слоты, бронирование) ---------- */
 const API = import.meta.env.VITE_API_URL as string;
 const initData = () => window.Telegram?.WebApp?.initData ?? "";
-// lib/supabase/api.ts — ЧАСТЬ 2 (строки 701-конец)
 
 export async function fetchSlots(
   specialistId: string,
@@ -440,7 +436,6 @@ export async function fetchSlots(
   const shopId = await getCurrentShopId();
   if (!shopId) return [];
 
-  // Формируем URL с busyRanges
   let url = `${API}/api/day-slots?shop_id=${shopId}&specialist=${specialistId}&service=${serviceId}&date=${dateStr}&initData=${encodeURIComponent(initData())}`;
   
   if (busyRanges.length > 0) {
@@ -452,7 +447,6 @@ export async function fetchSlots(
   const result = await res.json();
   const slots = result.ok ? result.slots : [];
   
-  // ===== ФИЛЬТРУЕМ ПРОШЕДШИЕ СЛОТЫ =====
   const now = new Date();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -461,10 +455,9 @@ export async function fetchSlots(
   const isToday = selectedDate.toDateString() === today.toDateString();
 
   if (isToday) {
-      
     return slots.filter((slot: any) => {
       const slotMoscow = new Date(slot.slot_start + '+03:00');
-      return slotMoscow > now; // ✅ ИСПРАВЛЕНО
+      return slotMoscow > now;
     });
   }
   
@@ -512,7 +505,6 @@ export async function apiBook(serviceId: string, specialistId: string, startsAt:
     return { status: 400, data: null };
   }
 
-  // ===== 🔥 ПРОВЕРКА НА ЗАМОРОЗКУ =====
   try {
     const initData = window.Telegram?.WebApp?.initData || "";
     const params = new URLSearchParams(initData);
@@ -1007,7 +999,6 @@ export async function apiBookCart(
     return { status: 400, data: null };
   }
 
-  // ===== 🔥 ПРОВЕРКА НА ЗАМОРОЗКУ =====
   try {
     const initData = window.Telegram?.WebApp?.initData || "";
     const params = new URLSearchParams(initData);
@@ -1647,6 +1638,26 @@ export async function apiCancelReservation(saleId: string): Promise<{
     return { status: res.status, data: await res.json().catch(() => null) };
   } catch {
     return { status: 0, data: null };
+  }
+}
+
+/* ================= МОДУЛИ САЛОНА ================= */
+export async function fetchShopModules(shopId: string): Promise<Record<string, any> | null> {
+  try {
+    const res = await fetch(
+      `${API}/api/shop-modules?shop_id=${shopId}&initData=${encodeURIComponent(initData())}`
+    );
+    
+    if (!res.ok) {
+      console.error('❌ Ошибка загрузки модулей:', res.status);
+      return null;
+    }
+    
+    const result = await res.json();
+    return result.ok ? result.modules : null;
+  } catch (error) {
+    console.error('❌ Ошибка запроса модулей:', error);
+    return null;
   }
 }
 

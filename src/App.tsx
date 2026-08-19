@@ -592,34 +592,25 @@ function Home({ onNavigate }: { onNavigate: (s: Screen) => void }) {
       },
     );
 
-    // 🔥 Проверяем модуль stock у салона
-  Promise.resolve(getCurrentShopId()).then((shopId) => {
-    console.log('🔍 shopId:', shopId);
-    if (shopId) {
-      Promise.resolve(
-        supabase
-          .from("shops")
-          .select("modules")
-          .eq("id", shopId)
-          .single()
-      ).then(({ data }: { data: { modules: Record<string, any> } | null }) => {
-        console.log('🔍 data:', data);
-        console.log('🔍 modules:', data?.modules);
-        console.log('🔍 stock:', data?.modules?.stock);
-        const has = hasModule(data?.modules, "stock");
-        console.log('🔍 hasStock:', has);
-        setHasStock(has);
-        setStockLoading(false);
-      }).catch((err: any) => {
-        console.error('❌ Ошибка запроса:', err);
-        setStockLoading(false);
-      });
-    } else {
-      console.log('⚠️ shopId не найден');
+    // 🔥 Проверяем модуль stock у салона через API
+Promise.resolve(getCurrentShopId()).then((shopId) => {
+  console.log('🔍 shopId:', shopId);
+  if (shopId) {
+    fetchShopModules(shopId).then((modules) => {
+      console.log('🔍 modules:', modules);
+      const has = hasModule(modules, "stock");
+      console.log('🔍 hasStock:', has);
+      setHasStock(has);
       setStockLoading(false);
-    }
-  });
-}, []);
+    }).catch((err: any) => {
+      console.error('❌ Ошибка запроса модулей:', err);
+      setStockLoading(false);
+    });
+  } else {
+    console.log('⚠️ shopId не найден');
+    setStockLoading(false);
+  }
+});
 
   const name = tg?.initDataUnsafe?.user?.first_name ?? "гость";
   const query = q.trim().toLowerCase();
