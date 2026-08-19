@@ -1,7 +1,7 @@
 // src/hooks/useStockModule.ts
 import { useEffect, useState } from "react";
-import { getCurrentShopId } from "@/lib/supabase/api";
-import { supabase } from "@/lib/supabase/client";
+import { getCurrentShopId } from "../lib/api";  // 🔥 относительный путь
+import { supabase } from "../lib/supabase/client";  // 🔥 относительный путь
 
 export function useStockModule() {
   const [hasStock, setHasStock] = useState<boolean | null>(null);
