@@ -58,6 +58,7 @@ import MasterCabinet from "./MasterCabinet";
 import MasterLinkScreen from "./MasterLinkScreen";
 import ShopScreen, { MyProductsScreen, MyCertificatesScreen } from "./ShopScreen";
 import { cacheGet, cacheSet, cacheDrop, cacheDropPrefix } from "./lib/cache";
+import { supabase } from "./lib/supabase/client";
 import type {
   Category,
   Promo,
