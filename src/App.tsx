@@ -2322,6 +2322,7 @@ function CartScreen({
   onReserveOnly: () => void;
   hasStock?: boolean; // 🔥 Добавляем
 }) {
+  console.log('🔍 CartScreen hasStock:', hasStock, 'type:', typeof hasStock); // 👈 Добавь
   const [price, setPrice] = useState<CartPrice | null>(null);
   const [reserving, setReserving] = useState(false);
 
@@ -2341,20 +2342,22 @@ function CartScreen({
   }, [cart]);
 
   if (cart.length === 0 && products.length === 0) {
-    return (
-      <div>
-        <div className="sect-title" style={{ marginTop: 0 }}>Корзина</div>
-        <div className="empty">
-          В корзине пусто. Добавьте услуги, чтобы записаться на несколько процедур сразу,
-          или загляните в магазин.
-        </div>
-        <div style={{ maxWidth: 320, margin: "16px auto 0", display: "grid", gap: 8 }}>
-          <button className="btn btn-primary" onClick={onAdd}>К услугам</button>
-          <button className="btn btn-ghost" onClick={onShop}>В магазин</button>
-        </div>
+  return (
+    <div>
+      <div className="sect-title" style={{ marginTop: 0 }}>Корзина</div>
+      <div className="empty">
+        В корзине пусто. Добавьте услуги, чтобы записаться на несколько процедур сразу,
+        или загляните в магазин.
       </div>
-    );
-  }
+      <div style={{ maxWidth: 320, margin: "16px auto 0", display: "grid", gap: 8 }}>
+        <button className="btn btn-primary" onClick={onAdd}>К услугам</button>
+        {hasStock && (
+          <button className="btn btn-ghost" onClick={onShop}>В магазин</button>
+        )}
+      </div>
+    </div>
+  );
+}
 
   const subtotal = price?.subtotal ?? cart.reduce((s, c) => s + c.base_price, 0);
   const discount = price?.discount_total ?? 0;
