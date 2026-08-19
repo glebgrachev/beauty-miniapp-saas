@@ -58,6 +58,10 @@ import MasterCabinet from "./MasterCabinet";
 import MasterLinkScreen from "./MasterLinkScreen";
 import ShopScreen, { MyProductsScreen, MyCertificatesScreen } from "./ShopScreen";
 import { cacheGet, cacheSet, cacheDrop, cacheDropPrefix } from "./lib/cache";
+
+import { getCurrentShopId } from "./lib/api";
+import { supabase } from "./lib/supabase/client";
+
 import type {
   Category,
   Promo,
@@ -572,6 +576,10 @@ function Home({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const [specialists, setSpecialists] = useState<SpecialistCard[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
+  // 🔥 Добавить эти две строки
+  const [hasStock, setHasStock] = useState(false);
+  const [stockLoading, setStockLoading] = useState(true);
+
 
   useEffect(() => {
     Promise.all([fetchCategories(), fetchPromos(), fetchSpecialists()]).then(
@@ -582,6 +590,24 @@ function Home({ onNavigate }: { onNavigate: (s: Screen) => void }) {
         setLoading(false);
       },
     );
+
+    // 🔥 Проверяем модуль stock у салона
+    getCurrentShopId().then((shopId) => {
+      if (shopId) {
+        supabase
+          .from("shops")
+          .select("modules")
+          .eq("id", shopId)
+          .single()
+          .then(({ data }) => {
+            const stockValue = data?.modules?.stock;
+            setHasStock(stockValue !== undefined && stockValue !== null && stockValue !== false);
+            setStockLoading(false);
+          });
+      } else {
+        setStockLoading(false);
+      }
+    });
   }, []);
 
   const name = tg?.initDataUnsafe?.user?.first_name ?? "гость";
