@@ -111,6 +111,7 @@ export default function App() {
   const cachedMe = cacheGet<MasterMe>("me", 7 * 24 * 3600_000, "local");
   const [me, setMe] = useState<MasterMe | null>(cachedMe?.value ?? null);
   const [meLoaded, setMeLoaded] = useState(cachedMe != null);
+  const [hasStock, setHasStock] = useState(false);
 
   const checkMe = useCallback(async (retry = 0) => {
     const r = await apiMasterWhoami();
@@ -256,7 +257,7 @@ export default function App() {
   };
 
   let content: ReactNode;
-  if (screen.name === "home") content = <Home onNavigate={push} />;
+  if (screen.name === "home") content = <Home onNavigate={push} onHasStockChange={setHasStock} />;
   else if (screen.name === "bookings")
     content = <BookingsScreen onOpenReview={(id) => push({ name: "review", bookingId: id })} onOpenCancel={(id) => push({ name: "cancel", bookingId: id })} onBrowse={() => goTab("home")} onOpenReschedule={(b) => push({ name: "reschedule", bookingId: b.id, serviceId: b.service_id, specialistId: b.specialist_id, origStartsAt: b.starts_at })} />;
   else if (screen.name === "profile")
@@ -343,6 +344,7 @@ export default function App() {
         onShop={() => push({ name: "shop" })}
         onCheckout={startCheckout}
         onReserveOnly={reserveOnly}
+        hasStock={hasStock} // 🔥 Добавить эту строку
       />
     );
   else if (screen.name === "schedule")
@@ -570,7 +572,7 @@ function promoBadge(p: Promo) {
 }
 
 /* ---------- HOME ---------- */
-function Home({ onNavigate }: { onNavigate: (s: Screen) => void }) {
+function Home({ onNavigate, onHasStockChange }: { onNavigate: (s: Screen) => void; onHasStockChange?: (has: boolean) => void }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [promos, setPromos] = useState<Promo[]>([]);
   const [specialists, setSpecialists] = useState<SpecialistCard[]>([]);
