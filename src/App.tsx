@@ -594,6 +594,7 @@ function Home({ onNavigate }: { onNavigate: (s: Screen) => void }) {
 
     // 🔥 Проверяем модуль stock у салона
   getCurrentShopId().then((shopId) => {
+    console.log('🔍 shopId:', shopId);
     if (shopId) {
       supabase
         .from("shops")
@@ -601,11 +602,20 @@ function Home({ onNavigate }: { onNavigate: (s: Screen) => void }) {
         .eq("id", shopId)
         .single()
         .then(({ data }: { data: { modules: Record<string, any> } | null }) => {
+          console.log('🔍 data:', data);
+          console.log('🔍 modules:', data?.modules);
+          console.log('🔍 stock:', data?.modules?.stock);
           const has = hasModule(data?.modules, "stock");
+          console.log('🔍 hasStock:', has);
           setHasStock(has);
+          setStockLoading(false);
+        })
+        .catch((err) => {
+          console.error('❌ Ошибка запроса:', err);
           setStockLoading(false);
         });
     } else {
+      console.log('⚠️ shopId не найден');
       setStockLoading(false);
     }
   });
