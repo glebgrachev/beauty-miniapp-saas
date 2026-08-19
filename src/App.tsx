@@ -58,7 +58,6 @@ import MasterCabinet from "./MasterCabinet";
 import MasterLinkScreen from "./MasterLinkScreen";
 import ShopScreen, { MyProductsScreen, MyCertificatesScreen } from "./ShopScreen";
 import { cacheGet, cacheSet, cacheDrop, cacheDropPrefix } from "./lib/cache";
-import { supabase } from "./lib/supabase/client";
 import type {
   Category,
   Promo,
@@ -87,15 +86,13 @@ export default function App() {
     const xid = params.get("cancel");
     const uid = params.get("unsub");
     const wl = params.get("wl");
-    const startapp = params.get("startapp"); // 👈 Добавляем
+    const startapp = params.get("startapp");
     
-    // ✅ Обработка startapp (новый способ, должен быть первым)
     if (startapp?.startsWith("confirm_")) {
       const bookingId = startapp.replace("confirm_", "");
       if (bookingId) return [{ name: "home" }, { name: "confirm", bookingId }];
     }
     
-    // Старые способы (для обратной совместимости)
     if (wl) return [{ name: "home" }, { name: "my-waitlist" }];
     if (cid) return [{ name: "home" }, { name: "confirm", bookingId: cid }];
     if (rid) return [{ name: "home" }, { name: "review", bookingId: rid }];
@@ -575,8 +572,6 @@ function Home({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const [specialists, setSpecialists] = useState<SpecialistCard[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
-  const [hasStock, setHasStock] = useState(false);
-  const [stockLoading, setStockLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([fetchCategories(), fetchPromos(), fetchSpecialists()]).then(
@@ -638,16 +633,16 @@ function Home({ onNavigate }: { onNavigate: (s: Screen) => void }) {
         </>
       )}
 
-      {/* 🔥 Баннер магазина — показываем ТОЛЬКО если есть модуль stock */}
-      {!stockLoading && hasStock && (
-        <button className="shop-banner" onClick={() => onNavigate({ name: "shop" })}>
-          <div className="sb-left">
-            <div className="sb-title">🛍 Магазин</div>
-            <div className="sb-sub">Профессиональный уход — заберите при визите</div>
-          </div>
-          <span className="sb-go">›</span>
-        </button>
-      )}
+      {/* 🛍 Магазин — показываем только при наличии модуля stock */}
+{!stockLoading && hasStock && (
+  <button className="shop-banner" onClick={() => onNavigate({ name: "shop" })}>
+    <div className="sb-left">
+      <div className="sb-title">🛍 Магазин</div>
+      <div className="sb-sub">Профессиональный уход — заберите при визите</div>
+    </div>
+    <span className="sb-go">›</span>
+  </button>
+)}
 
       <div className="sect-title">Наши специалисты</div>
       {loading ? (
