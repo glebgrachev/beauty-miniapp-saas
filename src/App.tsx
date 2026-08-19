@@ -60,6 +60,7 @@ import ShopScreen, { MyProductsScreen, MyCertificatesScreen } from "./ShopScreen
 import { cacheGet, cacheSet, cacheDrop, cacheDropPrefix } from "./lib/cache";
 
 import { getCurrentShopId } from "./lib/api";
+import { getCurrentShopId, fetchShopModules } from "./lib/api";
 import { supabase } from "./lib/supabase";
 import { hasModule } from "./lib/modules";
 
@@ -611,6 +612,7 @@ Promise.resolve(getCurrentShopId()).then((shopId) => {
     setStockLoading(false);
   }
 });
+}, []);
 
   const name = tg?.initDataUnsafe?.user?.first_name ?? "гость";
   const query = q.trim().toLowerCase();
