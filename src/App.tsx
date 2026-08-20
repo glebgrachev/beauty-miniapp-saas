@@ -661,7 +661,8 @@ Promise.resolve(getCurrentShopId()).then((shopId) => {
         </div>
       )}
 
-      {promos.length > 0 && (
+      {/* 🔥 Акции — показываем только при наличии модуля promotions */}
+      {!promotionsLoading && hasPromotions && promos.length > 0 && (
         <>
           <div className="sect-title">Акции</div>
           <div className="carousel">
