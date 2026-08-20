@@ -113,7 +113,14 @@ export default function App() {
   const [meLoaded, setMeLoaded] = useState(cachedMe != null);
   const [hasStock, setHasStock] = useState(false);
   const [shopModules, setShopModules] = useState<Record<string, any> | null>(null);
-  
+
+// 🔥 Добавьте этот useEffect, чтобы использовать shopModules
+useEffect(() => {
+  if (shopModules) {
+    console.debug('📦 Модули загружены:', Object.keys(shopModules).join(', '));
+  }
+}, [shopModules]);
+    
   const checkMe = useCallback(async (retry = 0) => {
     const r = await apiMasterWhoami();
     if (r.status === 401 && retry < 2) {
@@ -580,7 +587,7 @@ function Home({ onNavigate, onHasStockChange, onModulesLoaded }: { onNavigate: (
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [hasStock, setHasStock] = useState(false);
-  const [shopModules, setShopModules] = useState<Record<string, any> | null>(null);
+  
   const [stockLoading, setStockLoading] = useState(true);
   // 👇 СЮДА ВСТАВИТЬ
   const [hasPromotions, setHasPromotions] = useState(false);
