@@ -578,9 +578,11 @@ function Home({ onNavigate, onHasStockChange }: { onNavigate: (s: Screen) => voi
   const [specialists, setSpecialists] = useState<SpecialistCard[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
-  // 🔥 Добавить эти две строки
   const [hasStock, setHasStock] = useState(false);
   const [stockLoading, setStockLoading] = useState(true);
+  // 👇 СЮДА ВСТАВИТЬ
+  const [hasPromotions, setHasPromotions] = useState(false);
+  const [promotionsLoading, setPromotionsLoading] = useState(true);
 
 
   useEffect(() => {
@@ -599,18 +601,28 @@ Promise.resolve(getCurrentShopId()).then((shopId) => {
   if (shopId) {
     fetchShopModules(shopId).then((modules) => {
       console.log('🔍 modules:', modules);
+      
+      // Проверяем stock
       const has = hasModule(modules, "stock");
       console.log('🔍 hasStock:', has);
       setHasStock(has);
-      onHasStockChange?.(has); // 🔥 Добавляем эту строку
+      onHasStockChange?.(has);
       setStockLoading(false);
+
+      // 🔥 Проверяем promotions
+      const hasPromo = hasModule(modules, "promotions");
+      setHasPromotions(hasPromo);
+      setPromotionsLoading(false);
+      
     }).catch((err: any) => {
       console.error('❌ Ошибка запроса модулей:', err);
       setStockLoading(false);
+      setPromotionsLoading(false);
     });
   } else {
     console.log('⚠️ shopId не найден');
     setStockLoading(false);
+    setPromotionsLoading(false);
   }
 });
 }, []);
