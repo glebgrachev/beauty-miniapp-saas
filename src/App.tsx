@@ -112,8 +112,7 @@ export default function App() {
   const [me, setMe] = useState<MasterMe | null>(cachedMe?.value ?? null);
   const [meLoaded, setMeLoaded] = useState(cachedMe != null);
   const [hasStock, setHasStock] = useState(false);
-  const [shopModules, setShopModules] = useState<Record<string, any> | null>(null);
-
+  
   const checkMe = useCallback(async (retry = 0) => {
     const r = await apiMasterWhoami();
     if (r.status === 401 && retry < 2) {
@@ -262,7 +261,7 @@ export default function App() {
   else if (screen.name === "bookings")
     content = <BookingsScreen onOpenReview={(id) => push({ name: "review", bookingId: id })} onOpenCancel={(id) => push({ name: "cancel", bookingId: id })} onBrowse={() => goTab("home")} onOpenReschedule={(b) => push({ name: "reschedule", bookingId: b.id, serviceId: b.service_id, specialistId: b.specialist_id, origStartsAt: b.starts_at })} />;
   else if (screen.name === "profile")
-    content = <ProfileScreen onNavigate={push} />;
+    content = <ProfileScreen onNavigate={push} modules={shopModules} />;
   else if (screen.name === "favorites")
     content = <FavoritesScreen onNavigate={push} onToggleFav={toggleFav} onBack={back} />;
   else if (screen.name === "my-reviews")
