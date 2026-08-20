@@ -112,6 +112,7 @@ export default function App() {
   const [me, setMe] = useState<MasterMe | null>(cachedMe?.value ?? null);
   const [meLoaded, setMeLoaded] = useState(cachedMe != null);
   const [hasStock, setHasStock] = useState(false);
+  const [shopModules, setShopModules] = useState<Record<string, any> | null>(null);
   
   const checkMe = useCallback(async (retry = 0) => {
     const r = await apiMasterWhoami();
