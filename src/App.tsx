@@ -112,6 +112,7 @@ export default function App() {
   const [me, setMe] = useState<MasterMe | null>(cachedMe?.value ?? null);
   const [meLoaded, setMeLoaded] = useState(cachedMe != null);
   const [hasStock, setHasStock] = useState(false);
+  const [shopModules, setShopModules] = useState<Record<string, any> | null>(null);
 
   const checkMe = useCallback(async (retry = 0) => {
     const r = await apiMasterWhoami();
@@ -257,7 +258,7 @@ export default function App() {
   };
 
   let content: ReactNode;
-  if (screen.name === "home") content = <Home onNavigate={push} onHasStockChange={setHasStock} />;
+  if (screen.name === "home") content = <Home onNavigate={push} onHasStockChange={setHasStock} onModulesLoaded={setShopModules} />;
   else if (screen.name === "bookings")
     content = <BookingsScreen onOpenReview={(id) => push({ name: "review", bookingId: id })} onOpenCancel={(id) => push({ name: "cancel", bookingId: id })} onBrowse={() => goTab("home")} onOpenReschedule={(b) => push({ name: "reschedule", bookingId: b.id, serviceId: b.service_id, specialistId: b.specialist_id, origStartsAt: b.starts_at })} />;
   else if (screen.name === "profile")
@@ -572,13 +573,14 @@ function promoBadge(p: Promo) {
 }
 
 /* ---------- HOME ---------- */
-function Home({ onNavigate, onHasStockChange }: { onNavigate: (s: Screen) => void; onHasStockChange?: (has: boolean) => void }) {
+function Home({ onNavigate, onHasStockChange, onModulesLoaded }: { onNavigate: (s: Screen) => void; onHasStockChange?: (has: boolean) => void; onModulesLoaded?: (modules: Record<string, any> | null) => void }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [promos, setPromos] = useState<Promo[]>([]);
   const [specialists, setSpecialists] = useState<SpecialistCard[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [hasStock, setHasStock] = useState(false);
+  const [shopModules, setShopModules] = useState<Record<string, any> | null>(null);
   const [stockLoading, setStockLoading] = useState(true);
   // 👇 СЮДА ВСТАВИТЬ
   const [hasPromotions, setHasPromotions] = useState(false);
@@ -601,6 +603,9 @@ Promise.resolve(getCurrentShopId()).then((shopId) => {
   if (shopId) {
     fetchShopModules(shopId).then((modules) => {
       console.log('🔍 modules:', modules);
+
+      // 🔥 ПОДНИМАЕМ МОДУЛИ НАВЕРХ
+      onModulesLoaded?.(modules);
       
       // Проверяем stock
       const has = hasModule(modules, "stock");
@@ -1953,12 +1958,15 @@ function CancelScreen({
 }
 
 /* ---------- PROFILE (хаб) ---------- */
-function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
+function ProfileScreen({ onNavigate, modules }: { onNavigate: (s: Screen) => void; modules?: Record<string, any> | null }) {
   const u = window.Telegram?.WebApp?.initDataUnsafe?.user;
   const name = [u?.first_name, u?.last_name].filter(Boolean).join(" ") || "Гость";
 
   const [loyalty, setLoyalty] = useState<LoyaltyData | null>(null);
   const [certs, setCerts] = useState<CertItem[]>([]);
+  const hasWaitlist = hasModule(modules, "waitlist");
+  const hasStock = hasModule(modules, "stock");
+  const hasCertificates = hasModule(modules, "certificates");
   const [code, setCode] = useState("");
   const [activating, setActivating] = useState(false);
   const [certMsg, setCertMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -2077,21 +2085,34 @@ function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
           <span className="menu-tx">Мои отзывы</span>
           <span className="menu-go">›</span>
         </button>
-        <button className="menu-row" onClick={() => onNavigate({ name: "my-waitlist" })}>
-          <span className="menu-ic">🔔</span>
-          <span className="menu-tx">Лист ожидания</span>
-          <span className="menu-go">›</span>
-        </button>
-        <button className="menu-row" onClick={() => onNavigate({ name: "my-certificates" })}>
-          <span className="menu-ic">🎁</span>
-          <span className="menu-tx">Мои сертификаты</span>
-          <span className="menu-go">›</span>
-        </button>
-        <button className="menu-row" onClick={() => onNavigate({ name: "my-products" })}>
-          <span className="menu-ic">🛍</span>
-          <span className="menu-tx">Мои товары</span>
-          <span className="menu-go">›</span>
-        </button>
+
+        {/* 🔥 Лист ожидания — только если есть модуль waitlist */}
+        {hasWaitlist && (
+          <button className="menu-row" onClick={() => onNavigate({ name: "my-waitlist" })}>
+            <span className="menu-ic">🔔</span>
+            <span className="menu-tx">Лист ожидания</span>
+            <span className="menu-go">›</span>
+          </button>
+        )}
+
+        {/* 🔥 Мои сертификаты — только если есть модуль certificates */}
+        {hasCertificates && (
+          <button className="menu-row" onClick={() => onNavigate({ name: "my-certificates" })}>
+            <span className="menu-ic">🎁</span>
+            <span className="menu-tx">Мои сертификаты</span>
+            <span className="menu-go">›</span>
+          </button>
+        )}
+
+        {/* 🔥 Мои товары — только если есть модуль stock */}
+        {hasStock && (
+          <button className="menu-row" onClick={() => onNavigate({ name: "my-products" })}>
+            <span className="menu-ic">🛍</span>
+            <span className="menu-tx">Мои товары</span>
+            <span className="menu-go">›</span>
+          </button>
+        )}
+
         <button className="menu-row" onClick={() => onNavigate({ name: "master-link" })}>
           <span className="menu-ic">💼</span>
           <span className="menu-tx">Вход для сотрудников</span>
