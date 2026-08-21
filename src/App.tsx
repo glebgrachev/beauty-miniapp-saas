@@ -501,11 +501,12 @@ function CertPicker({
   onChange: (certId: string | null, amount: number) => void;
 }) {
   const { formatPrice } = useCurrency(); // 👈 ДОБАВИТЬ ЭТУ СТРОКУ
-  
+
   if (certs.length === 0) return null;
   const selected = certs.find((c) => c.id === certId) ?? null;
   const maxCert = selected ? Math.max(0, Math.min(selected.balance, maxMoney)) : 0;
   const clamped = Math.min(amount, maxCert);
+  
 
   return (
     <div className="redeem-card">
@@ -846,90 +847,90 @@ function ServiceScreen({
   }
 
   const prices = masters.map((m) => m.price);
-  const min = prices.length ? Math.min(...prices) : null;
-  const max = prices.length ? Math.max(...prices) : null;
-  const priceLabel =
-    min == null || max == null ? "—" : min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`;
+const min = prices.length ? Math.min(...prices) : null;
+const max = prices.length ? Math.max(...prices) : null;
+const priceLabel =
+  min == null || max == null ? "—" : min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`;
 
-  return (
-    <div>
-      <button className="back-btn" onClick={onBack}>‹ Назад</button>
+return (
+  <div>
+    <button className="back-btn" onClick={onBack}>‹ Назад</button>
 
-      <div className="detail-hero">{service.image_url && <img loading="lazy" decoding="async" src={imgSrc(service.image_url, 800)} alt={service.name} />}</div>
-      <div className="title-row">
-        <h2 className="detail-title">{service.name}</h2>
-        <button
-          className={`fav-btn ${isFav("service", service.id) ? "on" : ""}`}
-          onClick={() => onToggleFav("service", service.id)}
-          aria-label="В избранное"
-        >
-          {isFav("service", service.id) ? "♥" : "♡"}
-        </button>
-      </div>
-      <div className="detail-meta">
-        <span>⏱ {fmtDuration(service.duration_min)}</span>
-        <span>💰 {priceLabel}</span>
-      </div>
-      {service.description && <p className="detail-desc">{service.description}</p>}
+    <div className="detail-hero">{service.image_url && <img loading="lazy" decoding="async" src={imgSrc(service.image_url, 800)} alt={service.name} />}</div>
+    <div className="title-row">
+      <h2 className="detail-title">{service.name}</h2>
+      <button
+        className={`fav-btn ${isFav("service", service.id) ? "on" : ""}`}
+        onClick={() => onToggleFav("service", service.id)}
+        aria-label="В избранное"
+      >
+        {isFav("service", service.id) ? "♥" : "♡"}
+      </button>
+    </div>
+    <div className="detail-meta">
+      <span>⏱ {fmtDuration(service.duration_min)}</span>
+      <span>💰 {priceLabel}</span>
+    </div>
+    {service.description && <p className="detail-desc">{service.description}</p>}
 
-      <div className="sect-title">Выберите мастера</div>
-      {masters.length === 0 ? (
-        <div className="empty">Пока нет мастеров, выполняющих эту услугу.</div>
-      ) : (
-        masters.map((m) => (
-          <div key={m.id} className="master-row">
-            <div
-              className="master-photo"
-              onClick={() => onNavigate({ name: "booking", serviceId: service.id, specialistId: m.id })}
-            >
-              {m.photo_url ? <img loading="lazy" decoding="async" src={imgSrc(m.photo_url, 120, 120)} alt={m.full_name} /> : initials(m.full_name)}
-            </div>
-            <div
-              className="master-info"
-              onClick={() => onNavigate({ name: "booking", serviceId: service.id, specialistId: m.id })}
-            >
-              <div className="master-name">{m.full_name}</div>
-              <div className="master-rating">★ {m.rating?.toFixed(1) ?? "0.0"}</div>
-            </div>
-            <div className="master-cta">
-              <div className="p">{formatPrice(m.price)}</div>
-              <div className="row-btns">
-                <button
-                  className="mini-btn"
-                  onClick={() =>
-                    onNavigate({ name: "booking", serviceId: service.id, specialistId: m.id })
-                  }
-                >
-                  Записаться
-                </button>
-                <button
-                  className={`mini-btn ghost ${addedId === m.id ? "added" : ""}`}
-                  onClick={() => {
-                    onAddToCart({
-                      service_id: service.id,
-                      service_name: service.name,
-                      specialist_id: m.id,
-                      specialist_name: m.full_name,
-                      base_price: m.price,
-                    });
-                    setAddedId(m.id);
-                    setTimeout(() => setAddedId((cur) => (cur === m.id ? null : cur)), 1500);
-                  }}
-                >
-                  {addedId === m.id ? "✓ Добавлено" : "+ в корзину"}
-                </button>
-              </div>
+    <div className="sect-title">Выберите мастера</div>
+    {masters.length === 0 ? (
+      <div className="empty">Пока нет мастеров, выполняющих эту услугу.</div>
+    ) : (
+      masters.map((m) => (
+        <div key={m.id} className="master-row">
+          <div
+            className="master-photo"
+            onClick={() => onNavigate({ name: "booking", serviceId: service.id, specialistId: m.id })}
+          >
+            {m.photo_url ? <img loading="lazy" decoding="async" src={imgSrc(m.photo_url, 120, 120)} alt={m.full_name} /> : initials(m.full_name)}
+          </div>
+          <div
+            className="master-info"
+            onClick={() => onNavigate({ name: "booking", serviceId: service.id, specialistId: m.id })}
+          >
+            <div className="master-name">{m.full_name}</div>
+            <div className="master-rating">★ {m.rating?.toFixed(1) ?? "0.0"}</div>
+          </div>
+          <div className="master-cta">
+            <div className="p">{formatPrice(m.price)}</div>
+            <div className="row-btns">
+              <button
+                className="mini-btn"
+                onClick={() =>
+                  onNavigate({ name: "booking", serviceId: service.id, specialistId: m.id })
+                }
+              >
+                Записаться
+              </button>
+              <button
+                className={`mini-btn ghost ${addedId === m.id ? "added" : ""}`}
+                onClick={() => {
+                  onAddToCart({
+                    service_id: service.id,
+                    service_name: service.name,
+                    specialist_id: m.id,
+                    specialist_name: m.full_name,
+                    base_price: m.price,
+                  });
+                  setAddedId(m.id);
+                  setTimeout(() => setAddedId((cur) => (cur === m.id ? null : cur)), 1500);
+                }}
+              >
+                {addedId === m.id ? "✓ Добавлено" : "+ в корзину"}
+              </button>
             </div>
           </div>
-        ))
-      )}
-      {cartCount > 0 && (
-        <button className="cart-fab" onClick={onOpenCart}>
-          🛒 В корзине: {cartCount} · Перейти
-        </button>
-      )}
-    </div>
-  );
+        </div>
+      ))
+    )}
+    {cartCount > 0 && (
+      <button className="cart-fab" onClick={onOpenCart}>
+        🛒 В корзине: {cartCount} · Перейти
+      </button>
+    )}
+  </div>
+);
 }
 
 /* ---------- BOOKING ---------- */
