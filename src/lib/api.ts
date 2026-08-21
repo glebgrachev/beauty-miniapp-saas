@@ -1824,23 +1824,51 @@ export async function apiMyCertificates(): Promise<{
 // 👇 ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ ВАЛЮТЫ САЛОНА
 export async function fetchShopCurrency(shopId: number): Promise<{ id: number; code: string; symbol: string; name: string } | null> {
   try {
+    console.log('💰 fetchShopCurrency: shopId=', shopId);
+    
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/shops?id=eq.${shopId}&select=currency_id,currencies(*)`,
-      {
-        headers: {
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-        },
-      }
-    );
-    if (!response.ok) return null;
+    console.log('💰 supabaseUrl:', supabaseUrl);
+    console.log('💰 supabaseKey exists:', !!supabaseKey);
+    
+    const url = `${supabaseUrl}/rest/v1/shops?id=eq.${shopId}&select=currency_id,currencies(*)`;
+    console.log('💰 URL:', url);
+    
+    const response = await fetch(url, {
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+    });
+    
+    console.log('💰 fetchShopCurrency: status=', response.status);
+    console.log('💰 fetchShopCurrency: ok=', response.ok);
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.log('❌ fetchShopCurrency: response not ok, body:', text);
+      return null;
+    }
+    
     const data = await response.json();
-    if (data.length === 0 || !data[0].currencies) return null;
+    console.log('💰 fetchShopCurrency: data=', data);
+    
+    if (data.length === 0) {
+      console.log('❌ fetchShopCurrency: no shop found for id=', shopId);
+      return null;
+    }
+    
+    if (!data[0].currencies) {
+      console.log('❌ fetchShopCurrency: no currencies relation');
+      console.log('💰 shop data:', data[0]);
+      return null;
+    }
+    
+    console.log('✅ fetchShopCurrency: currency found:', data[0].currencies);
     return data[0].currencies;
-  } catch {
+  } catch (error) {
+    console.error('❌ fetchShopCurrency error:', error);
     return null;
   }
 }
