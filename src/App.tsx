@@ -493,20 +493,22 @@ function CertPicker({
   certId,
   amount,
   onChange,
+  formatPrice, // 👈 Проп
 }: {
   certs: CertItem[];
   maxMoney: number;
   certId: string | null;
   amount: number;
   onChange: (certId: string | null, amount: number) => void;
+  formatPrice: (amount: number) => string; // 👈 ДОБАВИТЬ ТИП
 }) {
-  const { formatPrice } = useCurrency(); // 👈 ДОБАВИТЬ ЭТУ СТРОКУ
+  // ❌ УДАЛИТЬ ЭТУ СТРОКУ (она дублируется)
+  // const { formatPrice } = useCurrency();
 
   if (certs.length === 0) return null;
   const selected = certs.find((c) => c.id === certId) ?? null;
   const maxCert = selected ? Math.max(0, Math.min(selected.balance, maxMoney)) : 0;
   const clamped = Math.min(amount, maxCert);
-  
 
   return (
     <div className="redeem-card">
@@ -1314,6 +1316,7 @@ function BookingScreen({
           setCertId(id);
           setCertRedeem(amt);
         }}
+        formatPrice={formatPrice}
       />
 
       {err && <div className="book-note" style={{ color: "#e03945" }}>{err}</div>}

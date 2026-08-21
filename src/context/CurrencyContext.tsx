@@ -1,5 +1,5 @@
 // src/context/CurrencyContext.tsx
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'; // 👈 type ReactNode
 import { getCurrentShopId, fetchShopCurrency } from '../lib/api';
 
 type Currency = {
@@ -26,7 +26,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       try {
         const shopId = await getCurrentShopId();
         if (shopId) {
-          const cur = await fetchShopCurrency(shopId);
+          const cur = await fetchShopCurrency(Number(shopId)); // 👈 Number(shopId)
           if (cur) setCurrency(cur);
         }
       } catch (error) {
