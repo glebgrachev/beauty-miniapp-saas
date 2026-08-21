@@ -1,5 +1,5 @@
 // src/context/CurrencyContext.tsx
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'; // 👈 type ReactNode
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { getCurrentShopId, fetchShopCurrency } from '../lib/api';
 
 type Currency = {
@@ -24,13 +24,36 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function loadCurrency() {
       try {
+        console.log('💰 Загрузка валюты...');
         const shopId = await getCurrentShopId();
+        console.log('💰 shopId:', shopId);
+        
         if (shopId) {
-          const cur = await fetchShopCurrency(Number(shopId)); // 👈 Number(shopId)
-          if (cur) setCurrency(cur);
+          const cur = await fetchShopCurrency(Number(shopId));
+          console.log('💰 Валюта из БД:', cur);
+          if (cur) {
+            setCurrency(cur);
+            console.log('✅ Валюта установлена:', cur.code, cur.symbol);
+          }
+        } else {
+          console.log('⚠️ shopId не найден, используем RUB по умолчанию');
+          // Дефолтная валюта
+          setCurrency({
+            id: 1,
+            code: 'RUB',
+            symbol: '₽',
+            name: 'Российский рубль'
+          });
         }
       } catch (error) {
-        console.error('Error loading currency:', error);
+        console.error('❌ Ошибка загрузки валюты:', error);
+        // Дефолтная валюта при ошибке
+        setCurrency({
+          id: 1,
+          code: 'RUB',
+          symbol: '₽',
+          name: 'Российский рубль'
+        });
       } finally {
         setLoading(false);
       }
