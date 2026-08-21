@@ -849,8 +849,7 @@ function ServiceScreen({
   const prices = masters.map((m) => m.price);
 const min = prices.length ? Math.min(...prices) : null;
 const max = prices.length ? Math.max(...prices) : null;
-const priceLabel =
-  min == null || max == null ? "—" : min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`;
+const priceLabel = min == null || max == null ? "—" : min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`;
 
 return (
   <div>
@@ -1007,9 +1006,7 @@ function BookingScreen({
   const [certRedeem, setCertRedeem] = useState(0);
   const { formatPrice } = useCurrency();
 
-// Заменить все formatPrice:
-const priceLabel = min == null || max == null ? "—" : min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`;
-<div className="p">{formatPrice(m.price)}</div>
+
 
   useEffect(() => {
     apiLoyalty().then((r) => {
