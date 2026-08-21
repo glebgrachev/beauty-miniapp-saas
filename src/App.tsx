@@ -1360,6 +1360,8 @@ function SpecialistScreen({
   isFav: (kind: "specialist" | "service", id: string) => boolean;
   onToggleFav: (kind: "specialist" | "service", id: string) => void;
 }) {
+
+  const { formatPrice } = useCurrency();
   const [data, setData] = useState<{
     specialist: { id: string; full_name: string; photo_url: string | null; bio: string | null; experience_years: number; rating: number } | null;
     services: SpecServiceItem[];
