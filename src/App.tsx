@@ -3245,6 +3245,7 @@ function ScheduleScreen({
             setCertId(id);
             setCertRedeem(amt);
           }}
+          formatPrice={formatPrice}
         />
 
         {orderErr && <div className="book-note" style={{ color: "#e03945" }}>{orderErr}</div>}
