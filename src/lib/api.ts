@@ -1826,47 +1826,34 @@ export async function fetchShopCurrency(shopId: number): Promise<{ id: number; c
   try {
     console.log('💰 fetchShopCurrency: shopId=', shopId);
     
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    // 👇 ИСПОЛЬЗУЕМ VIEW shops_details
+    const { data, error } = await supabase
+      .from('shops_details')
+      .select('currency_id, currency_code, currency_symbol, currency_name')
+      .eq('id', shopId)
+      .single();
     
-    console.log('💰 supabaseUrl:', supabaseUrl);
-    console.log('💰 supabaseKey exists:', !!supabaseKey);
+    console.log('💰 shops_details data:', data);
+    console.log('💰 shops_details error:', error);
     
-    const url = `${supabaseUrl}/rest/v1/shops?id=eq.${shopId}&select=currency_id,currencies(*)`;
-    console.log('💰 URL:', url);
-    
-    const response = await fetch(url, {
-      headers: {
-        apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`,
-      },
-    });
-    
-    console.log('💰 fetchShopCurrency: status=', response.status);
-    console.log('💰 fetchShopCurrency: ok=', response.ok);
-    
-    if (!response.ok) {
-      const text = await response.text();
-      console.log('❌ fetchShopCurrency: response not ok, body:', text);
+    if (error || !data) {
+      console.log('❌ shop not found or error');
       return null;
     }
     
-    const data = await response.json();
-    console.log('💰 fetchShopCurrency: data=', data);
-    
-    if (data.length === 0) {
-      console.log('❌ fetchShopCurrency: no shop found for id=', shopId);
+    if (!data.currency_id) {
+      console.log('⚠️ shop has no currency');
       return null;
     }
     
-    if (!data[0].currencies) {
-      console.log('❌ fetchShopCurrency: no currencies relation');
-      console.log('💰 shop data:', data[0]);
-      return null;
-    }
+    console.log('✅ currency found:', data.currency_code, data.currency_symbol);
     
-    console.log('✅ fetchShopCurrency: currency found:', data[0].currencies);
-    return data[0].currencies;
+    return {
+      id: data.currency_id,
+      code: data.currency_code,
+      symbol: data.currency_symbol,
+      name: data.currency_name,
+    };
   } catch (error) {
     console.error('❌ fetchShopCurrency error:', error);
     return null;
