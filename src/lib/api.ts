@@ -1820,3 +1820,27 @@ export async function apiMyCertificates(): Promise<{
     return { status: 0, data: null };
   }
 }
+
+// 👇 ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ ВАЛЮТЫ САЛОНА
+export async function fetchShopCurrency(shopId: number): Promise<{ id: number; code: string; symbol: string; name: string } | null> {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/shops?id=eq.${shopId}&select=currency_id,currencies(*)`,
+      {
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+      }
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data.length === 0 || !data[0].currencies) return null;
+    return data[0].currencies;
+  } catch {
+    return null;
+  }
+}

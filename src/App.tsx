@@ -58,7 +58,7 @@ import MasterCabinet from "./MasterCabinet";
 import MasterLinkScreen from "./MasterLinkScreen";
 import ShopScreen, { MyProductsScreen, MyCertificatesScreen } from "./ShopScreen";
 import { cacheGet, cacheSet, cacheDrop, cacheDropPrefix } from "./lib/cache";
-
+import { CurrencyProvider, useCurrency } from './context/CurrencyContext';
 import { getCurrentShopId, fetchShopModules } from "./lib/api";
 import { hasModule } from "./lib/modules";
 
@@ -394,16 +394,18 @@ useEffect(() => {
   }
 
   return (
-    <div className={showTabBar ? "app has-tabbar" : "app"}>
-      {content}
-      {showTabBar && (
-        <TabBar
-          active={activeTab}
-          cartCount={cart.length + cartProducts.reduce((s2, p) => s2 + p.qty, 0)}
-          onTab={goTab}
-        />
-      )}
-    </div>
+    <CurrencyProvider>
+      <div className={showTabBar ? "app has-tabbar" : "app"}>
+        {content}
+        {showTabBar && (
+          <TabBar
+            active={activeTab}
+            cartCount={cart.length + cartProducts.reduce((s2, p) => s2 + p.qty, 0)}
+            onTab={goTab}
+          />
+        )}
+      </div>
+    </CurrencyProvider>
   );
 }
 
@@ -498,10 +500,13 @@ function CertPicker({
   amount: number;
   onChange: (certId: string | null, amount: number) => void;
 }) {
+  const { formatPrice } = useCurrency(); // 👈 ДОБАВИТЬ ЭТУ СТРОКУ
+  
   if (certs.length === 0) return null;
   const selected = certs.find((c) => c.id === certId) ?? null;
   const maxCert = selected ? Math.max(0, Math.min(selected.balance, maxMoney)) : 0;
   const clamped = Math.min(amount, maxCert);
+
   return (
     <div className="redeem-card">
       <div className="redeem-head">
@@ -517,7 +522,7 @@ function CertPicker({
               onClick={() => (on ? onChange(null, 0) : onChange(c.id, Math.min(c.balance, maxMoney)))}
             >
               <span className="co-code">{c.code}</span>
-              <span className="co-bal">{fmtRub(c.balance)}</span>
+              <span className="co-bal">{formatPrice(c.balance)}</span>
               <span className="co-exp">{c.expires_at ? `до ${certDate(c.expires_at)}` : "бессрочно"}</span>
             </button>
           );
@@ -535,7 +540,7 @@ function CertPicker({
             className="redeem-slider"
           />
           <div className="redeem-foot">
-            <span>{clamped > 0 ? `Оплата сертификатом: −${fmtRub(clamped)}` : "Двигайте, чтобы применить"}</span>
+            <span>{clamped > 0 ? `Оплата сертификатом: −${formatPrice(clamped)}` : "Двигайте, чтобы применить"}</span>
             <button className="redeem-max" onClick={() => onChange(selected.id, clamped >= maxCert ? 0 : maxCert)}>
               {clamped >= maxCert ? "Сбросить" : "Максимум"}
             </button>
@@ -563,9 +568,7 @@ function initials(name: string) {
 function todayLabel() {
   return new Intl.DateTimeFormat("ru-RU", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
 }
-function fmtRub(n: number) {
-  return n.toLocaleString("ru-RU") + " ₽";
-}
+
 function fmtDuration(min: number) {
   if (min < 60) return `${min} мин`;
   const h = Math.floor(min / 60);
@@ -589,7 +592,7 @@ function Home({ onNavigate, onHasStockChange, onModulesLoaded }: { onNavigate: (
   const [hasStock, setHasStock] = useState(false);
   
   const [stockLoading, setStockLoading] = useState(true);
-  // 👇 СЮДА ВСТАВИТЬ
+  const { formatPrice } = useCurrency(); // 👈 Добавить
   const [hasPromotions, setHasPromotions] = useState(false);
   const [promotionsLoading, setPromotionsLoading] = useState(true);
 
@@ -718,7 +721,7 @@ Promise.resolve(getCurrentShopId()).then((shopId) => {
                 <div className="name">{s.full_name}</div>
                 <div className="meta">
                   <span className="rating">★ {s.rating?.toFixed(1) ?? "0.0"}</span>
-                  {s.price_from != null && <span className="from">от <b>{fmtRub(s.price_from)}</b></span>}
+                  {s.price_from != null && <span className="from">от <b>{formatPrice(s.price_from)}</b></span>}
                 </div>
               </div>
             </div>
@@ -737,6 +740,7 @@ function CategoryScreen({
   const [services, setServices] = useState<ServiceCard[]>([]);
   const [active, setActive] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     fetchCategoryView(id).then(({ chips, services }) => {
@@ -786,7 +790,7 @@ function CategoryScreen({
                 <div className="svc-sub">{fmtDuration(s.duration_min)}</div>
               </div>
               <div className="svc-price">
-                {s.price_from != null ? <>от {fmtRub(s.price_from)}</> : "—"}
+                {s.price_from != null ? <>от {formatPrice(s.price_from)}</> : "—"}
                 <small>записаться</small>
               </div>
             </div>
@@ -814,6 +818,7 @@ function ServiceScreen({
   const [service, setService] = useState<ServiceDetail | null>(null);
   const [masters, setMasters] = useState<Master[]>([]);
   const [loading, setLoading] = useState(true);
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     fetchServiceDetail(id).then((res) => {
@@ -844,7 +849,7 @@ function ServiceScreen({
   const min = prices.length ? Math.min(...prices) : null;
   const max = prices.length ? Math.max(...prices) : null;
   const priceLabel =
-    min == null || max == null ? "—" : min === max ? fmtRub(min) : `${fmtRub(min)} – ${fmtRub(max)}`;
+    min == null || max == null ? "—" : min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`;
 
   return (
     <div>
@@ -887,7 +892,7 @@ function ServiceScreen({
               <div className="master-rating">★ {m.rating?.toFixed(1) ?? "0.0"}</div>
             </div>
             <div className="master-cta">
-              <div className="p">{fmtRub(m.price)}</div>
+              <div className="p">{formatPrice(m.price)}</div>
               <div className="row-btns">
                 <button
                   className="mini-btn"
@@ -999,6 +1004,11 @@ function BookingScreen({
   const [certs, setCerts] = useState<CertItem[]>([]);
   const [certId, setCertId] = useState<string | null>(null);
   const [certRedeem, setCertRedeem] = useState(0);
+  const { formatPrice } = useCurrency();
+
+// Заменить все formatPrice:
+const priceLabel = min == null || max == null ? "—" : min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`;
+<div className="p">{formatPrice(m.price)}</div>
 
   useEffect(() => {
     apiLoyalty().then((r) => {
@@ -1126,7 +1136,7 @@ function BookingScreen({
           timeZone: "UTC"
         })}
         </p>
-        <p>К оплате: <b>{fmtRub(result.final)}</b></p>
+        <p>К оплате: <b>{formatPrice(result.final)}</b></p>
         <div style={{ maxWidth: 280, margin: "24px auto 0" }}>
           <button className="btn btn-primary" onClick={onHome}>На главную</button>
         </div>
@@ -1243,29 +1253,29 @@ function BookingScreen({
         <div className="price-card">
           <div className="price-row muted">
             <span>Стоимость услуги</span>
-            <span>{fmtRub(full)}</span>
+            <span>{formatPrice(full)}</span>
           </div>
           {discount > 0 && (
             <div className="price-row discount">
               <span>Скидка{price?.promo_title ? ` · ${price.promo_title}` : ""}</span>
-              <span>−{fmtRub(discount)}</span>
+              <span>−{formatPrice(discount)}</span>
             </div>
           )}
           {redeemClamped > 0 && (
             <div className="price-row discount">
               <span>Оплата баллами ({redeemClamped})</span>
-              <span>−{fmtRub(redeemClamped * pv)}</span>
+              <span>−{formatPrice(redeemClamped * pv)}</span>
             </div>
           )}
           {certClamped > 0 && (
             <div className="price-row discount">
               <span>Оплата сертификатом</span>
-              <span>−{fmtRub(certClamped)}</span>
+              <span>−{formatPrice(certClamped)}</span>
             </div>
           )}
           <div className="price-row total">
             <span>К оплате{redeemClamped > 0 || certClamped > 0 ? " деньгами" : ""}</span>
-            <span>{fmtRub(moneyDue ?? full)}</span>
+            <span>{formatPrice(moneyDue ?? full)}</span>
           </div>
         </div>
       )}
@@ -1286,7 +1296,7 @@ function BookingScreen({
             className="redeem-slider"
           />
           <div className="redeem-foot">
-            <span>{redeemClamped > 0 ? `Списываем ${redeemClamped} б. · −${fmtRub(redeemClamped * pv)}` : "Двигайте, чтобы применить баллы"}</span>
+            <span>{redeemClamped > 0 ? `Списываем ${redeemClamped} б. · −${formatPrice(redeemClamped * pv)}` : "Двигайте, чтобы применить баллы"}</span>
             <button
               className="redeem-max"
               onClick={() => setRedeem(redeemClamped >= maxRedeem ? 0 : maxRedeem)}
@@ -1427,7 +1437,7 @@ function SpecialistScreen({
               <div className="du">{fmtDuration(s.duration_min)}</div>
             </div>
             <div className="pr">
-              {fmtRub(s.price)}
+              {formatPrice(s.price)}
               <small>записаться ›</small>
             </div>
           </div>
@@ -1720,6 +1730,7 @@ function RescheduleScreen({
   const [err, setErr] = useState<string | null>(null);
   const [serviceName, setServiceName] = useState("");
   const [duration, setDuration] = useState<number | null>(null);
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     fetchServiceDetail(serviceId).then((r) => {
@@ -1800,7 +1811,7 @@ function RescheduleScreen({
               <div className="master-rating">★ {m.rating?.toFixed(1) ?? "0.0"}</div>
             </div>
             <div className="master-cta">
-              <div className="price">{fmtRub(m.price)}</div>
+              <div className="price">{formatPrice(m.price)}</div>
               {m.id === specId && <div className="go">Выбран ✓</div>}
             </div>
           </div>
@@ -1848,7 +1859,7 @@ function RescheduleScreen({
         <div className="price-card">
           <div className="price-row total">
             <span>Стоимость</span>
-            <span>{fmtRub(selected.price)}</span>
+            <span>{formatPrice(selected.price)}</span>
           </div>
         </div>
       )}
@@ -1977,6 +1988,7 @@ function ProfileScreen({ onNavigate, modules }: { onNavigate: (s: Screen) => voi
   const [code, setCode] = useState("");
   const [activating, setActivating] = useState(false);
   const [certMsg, setCertMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const { formatPrice } = useCurrency();
 
   function loadCerts() {
     apiCertificate().then((r) => {
@@ -2048,7 +2060,7 @@ function ProfileScreen({ onNavigate, modules }: { onNavigate: (s: Screen) => voi
           <div className="lc-left">
             <div className="lc-label">Мои сертификаты</div>
             <div className="lc-balance">
-              {fmtRub(certs.filter((c) => c.usable).reduce((s, c) => s + Number(c.balance), 0))}
+              {formatPrice(certs.filter((c) => c.usable).reduce((s, c) => s + Number(c.balance), 0))}
             </div>
             <div className="lc-hint">
               {(() => {
@@ -2367,6 +2379,8 @@ function CartScreen({
   const [price, setPrice] = useState<CartPrice | null>(null);
   const [reserving, setReserving] = useState(false);
 
+  const { formatPrice } = useCurrency();
+
   const productsTotal = products.reduce((s, p) => s + p.price * p.qty, 0);
   const productsCount = products.reduce((s, p) => s + p.qty, 0);
 
@@ -2458,11 +2472,11 @@ function CartScreen({
             <div className="cart-price">
               {disc > 0 ? (
                 <>
-                  <span className="old">{fmtRub(full)}</span>
-                  <span className="now">{fmtRub(final)}</span>
+                  <span className="old">{formatPrice(full)}</span>
+                  <span className="now">{formatPrice(final)}</span>
                 </>
               ) : (
-                <span className="now">{fmtRub(full)}</span>
+                <span className="now">{formatPrice(full)}</span>
               )}
             </div>
             <button className="cart-del" onClick={() => onRemove(i)} aria-label="Удалить">×</button>
@@ -2525,24 +2539,24 @@ function CartScreen({
         {cart.length > 0 && (
           <div className="price-row muted">
             <span>Услуги</span>
-            <span>{fmtRub(subtotal)}</span>
+            <span>{formatPrice(subtotal)}</span>
           </div>
         )}
         {discount > 0 && (
           <div className="price-row discount">
             <span>Скидка</span>
-            <span>−{fmtRub(discount)}</span>
+            <span>−{formatPrice(discount)}</span>
           </div>
         )}
         {products.length > 0 && (
           <div className="price-row muted">
             <span>Товары ({productsCount} шт)</span>
-            <span>{fmtRub(productsTotal)}</span>
+            <span>{formatPrice(productsTotal)}</span>
           </div>
         )}
         <div className="price-row total">
           <span>К оплате</span>
-          <span>{fmtRub(total + productsTotal)}</span>
+          <span>{formatPrice(total + productsTotal)}</span>
         </div>
       </div>
 
@@ -2570,7 +2584,7 @@ function CartScreen({
                 onReserveOnly();
               }}
             >
-              {reserving ? "Откладываем…" : `Отложить · ${fmtRub(productsTotal)}`}
+              {reserving ? "Откладываем…" : `Отложить · ${formatPrice(productsTotal)}`}
             </button>
             {hasStock && (
               <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={onShop}>
@@ -2928,6 +2942,7 @@ function ScheduleScreen({
   const [certs, setCerts] = useState<CertItem[]>([]);
   const [certId, setCertId] = useState<string | null>(null);
   const [certRedeem, setCertRedeem] = useState(0);
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     apiLoyalty().then((r) => {
@@ -3090,7 +3105,7 @@ function ScheduleScreen({
       <div className="success">
         <div className="ico">✓</div>
         <h2>Заказ оформлен!</h2>
-        <p>{positions.length} {positions.length === 1 ? "услуга" : "услуг"} · к оплате {fmtRub(total)}</p>
+        <p>{positions.length} {positions.length === 1 ? "услуга" : "услуг"} · к оплате {formatPrice(total)}</p>
         <p>Подтверждение отправлено в чат с ботом.</p>
         <div style={{ maxWidth: 280, margin: "24px auto 0" }}>
           <button className="btn btn-primary" onClick={onHome}>На главную</button>
@@ -3114,7 +3129,7 @@ function ScheduleScreen({
                 <div className="su" style={{ textTransform: "capitalize" }}>{c ? fullDateTime(c.starts_at) : ""}</div>
               </div>
               <div className="cart-price">
-                <span className="now">{p.is_gift && p.gift_discount_percent >= 100 ? "бесплатно" : fmtRub(c?.final_price ?? 0)}</span>
+                <span className="now">{p.is_gift && p.gift_discount_percent >= 100 ? "бесплатно" : formatPrice(c?.final_price ?? 0)}</span>
               </div>
             </div>
           );
@@ -3137,8 +3152,8 @@ function ScheduleScreen({
                   <div className="nm">{p.name}</div>
                   <div className="su">
                     {p.kind === "certificate" && p.face_value
-                      ? `Номинал ${fmtRub(Number(p.face_value))}`
-                      : `${fmtRub(p.price)} за шт`}
+                      ? `Номинал ${formatPrice(Number(p.face_value))}`
+                      : `${formatPrice(p.price)} за шт`}
                   </div>
                   <div className="shop-qty" style={{ marginTop: 6, width: "fit-content" }}>
                     <button onClick={() => onSetProductQty(p.product_id, p.qty - 1)}>−</button>
@@ -3147,7 +3162,7 @@ function ScheduleScreen({
                   </div>
                 </div>
                 <div className="cart-price">
-                  <span className="now">{fmtRub(p.price * p.qty)}</span>
+                  <span className="now">{formatPrice(p.price * p.qty)}</span>
                 </div>
                 <button
                   className="cart-del"
@@ -3167,29 +3182,29 @@ function ScheduleScreen({
         <div className="price-card">
           <div className="price-row muted">
             <span>{products.length > 0 ? "Услуги" : "Сумма"}</span>
-            <span>{fmtRub(cartTotal)}</span>
+            <span>{formatPrice(cartTotal)}</span>
           </div>
           {redeemClamped > 0 && (
             <div className="price-row discount">
               <span>Оплата баллами ({redeemClamped})</span>
-              <span>−{fmtRub(redeemClamped * pv)}</span>
+              <span>−{formatPrice(redeemClamped * pv)}</span>
             </div>
           )}
           {certClamped > 0 && (
             <div className="price-row discount">
               <span>Оплата сертификатом</span>
-              <span>−{fmtRub(certClamped)}</span>
+              <span>−{formatPrice(certClamped)}</span>
             </div>
           )}
           {productsTotal > 0 && (
             <div className="price-row muted">
               <span>Товары ({productsCount} шт)</span>
-              <span>{fmtRub(productsTotal)}</span>
+              <span>{formatPrice(productsTotal)}</span>
             </div>
           )}
           <div className="price-row total">
             <span>К оплате{redeemClamped > 0 || certClamped > 0 ? " деньгами" : ""}</span>
-            <span>{fmtRub(moneyDue + productsTotal)}</span>
+            <span>{formatPrice(moneyDue + productsTotal)}</span>
           </div>
         </div>
 
@@ -3209,7 +3224,7 @@ function ScheduleScreen({
               className="redeem-slider"
             />
             <div className="redeem-foot">
-              <span>{redeemClamped > 0 ? `Списываем ${redeemClamped} б. · −${fmtRub(redeemClamped * pv)}` : "Двигайте, чтобы применить баллы"}</span>
+              <span>{redeemClamped > 0 ? `Списываем ${redeemClamped} б. · −${formatPrice(redeemClamped * pv)}` : "Двигайте, чтобы применить баллы"}</span>
               <button
                 className="redeem-max"
                 onClick={() => setRedeem(redeemClamped >= maxRedeem ? 0 : maxRedeem)}
@@ -3425,6 +3440,7 @@ function CartProductRow({
   onSetQty: (productId: string, qty: number) => void;
 }) {
   const isCert = p.kind === "certificate";
+  const { formatPrice } = useCurrency();
 
   return (
     <div className="cart-row">
@@ -3439,8 +3455,8 @@ function CartProductRow({
         <div className="nm">{p.name}</div>
         <div className="su">
           {isCert && p.face_value
-            ? `Номинал ${fmtRub(Number(p.face_value))}`
-            : `${fmtRub(p.price)} за шт`}
+            ? `Номинал ${formatPrice(Number(p.face_value))}`
+            : `${formatPrice(p.price)} за шт`}
         </div>
         <div className="shop-qty" style={{ marginTop: 6, width: "fit-content" }}>
           <button onClick={() => onSetQty(p.product_id, p.qty - 1)}>−</button>
@@ -3449,7 +3465,7 @@ function CartProductRow({
         </div>
       </div>
       <div className="cart-price">
-        <span className="now">{fmtRub(p.price * p.qty)}</span>
+        <span className="now">{formatPrice(p.price * p.qty)}</span>
       </div>
     </div>
   );
