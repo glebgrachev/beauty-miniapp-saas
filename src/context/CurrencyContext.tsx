@@ -25,19 +25,31 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     async function loadCurrency() {
       try {
         console.log('💰 Загрузка валюты...');
+        
+        // 👇 СНАЧАЛА ПОЛУЧАЕМ shopId
         const shopId = await getCurrentShopId();
         console.log('💰 shopId:', shopId);
         
         if (shopId) {
+          // 👇 СРАЗУ ПОЛУЧАЕМ ВАЛЮТУ ПО shopId
           const cur = await fetchShopCurrency(Number(shopId));
           console.log('💰 Валюта из БД:', cur);
+          
           if (cur) {
             setCurrency(cur);
             console.log('✅ Валюта установлена:', cur.code, cur.symbol);
+          } else {
+            // Если валюты нет — RUB по умолчанию
+            console.log('⚠️ Валюта не найдена, используем RUB');
+            setCurrency({
+              id: 1,
+              code: 'RUB',
+              symbol: '₽',
+              name: 'Российский рубль'
+            });
           }
         } else {
           console.log('⚠️ shopId не найден, используем RUB по умолчанию');
-          // Дефолтная валюта
           setCurrency({
             id: 1,
             code: 'RUB',
@@ -47,7 +59,6 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error('❌ Ошибка загрузки валюты:', error);
-        // Дефолтная валюта при ошибке
         setCurrency({
           id: 1,
           code: 'RUB',
@@ -58,6 +69,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
+    
     loadCurrency();
   }, []);
 
